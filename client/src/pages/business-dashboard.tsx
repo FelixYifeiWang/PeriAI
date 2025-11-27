@@ -198,19 +198,18 @@ export default function BusinessDashboard() {
                         e.preventDefault();
                         handleSend();
                       }}
-                      className="w-full max-w-3xl space-y-5 text-center"
+                      className="w-full max-w-2xl space-y-4 text-center"
                     >
-                      <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                      <h2 className="text-xl font-semibold tracking-tight text-foreground">
                         {copy.chat.intro(profile?.companyName)}
                       </h2>
-                      <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                        <Plus className="h-5 w-5 text-slate-400" />
+                      <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.04)]">
                         <Textarea
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={handleKeyDown}
                           placeholder={copy.chat.placeholder}
-                          className="flex-1 min-h-[24px] resize-none border-none bg-transparent text-base text-foreground leading-6 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className="flex-1 min-h-[24px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible:ring-offset-0"
                           disabled={chatMutation.isPending}
                           rows={1}
                           autoFocus
@@ -218,7 +217,7 @@ export default function BusinessDashboard() {
                         <Button
                           type="submit"
                           disabled={!input.trim() || chatMutation.isPending}
-                          className="h-10 w-10 rounded-full bg-black p-0 text-white shadow-md"
+                          className="h-9 w-9 rounded-full bg-black p-0 text-white shadow-md"
                           size="icon"
                         >
                           <Send className="h-4 w-4" />
@@ -260,21 +259,20 @@ export default function BusinessDashboard() {
                   }}
                   className="space-y-3"
                 >
-                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                    <Plus className="h-5 w-5 text-slate-400" />
+                  <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.04)]">
                     <Textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder={copy.chat.placeholder}
-                      className="flex-1 min-h-[24px] resize-none border-none bg-transparent text-base text-foreground leading-6 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="flex-1 min-h-[24px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible:ring-offset-0"
                       disabled={chatMutation.isPending}
                       rows={1}
                     />
                     <Button
                       type="submit"
                       disabled={!input.trim() || chatMutation.isPending}
-                      className="h-10 w-10 rounded-full bg-black p-0 text-white shadow-md"
+                      className="h-9 w-9 rounded-full bg-black p-0 text-white shadow-md"
                       size="icon"
                     >
                       <Send className="h-4 w-4" />
