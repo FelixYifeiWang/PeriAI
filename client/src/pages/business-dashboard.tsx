@@ -546,6 +546,13 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
     return date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
+  const formatBudgetLocal = (min?: number, max?: number) => {
+    if (min != null && max != null) return `$${min} - $${max}`;
+    if (min != null) return `$${min}+`;
+    if (max != null) return `Up to $${max}`;
+    return "Not provided";
+  };
+
   return (
     <div className="rounded-2xl border border-muted-foreground/15 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="px-5 py-4 border-b border-muted-foreground/10">
@@ -574,7 +581,7 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                 <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
                 <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
                 <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
-                <div><span className="text-foreground font-medium">Budget:</span> {formatBudget(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
+                <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
                 <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
                 <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
               </div>
