@@ -110,18 +110,6 @@ export default function BusinessDashboard() {
   });
 
   useEffect(() => {
-    if (!messages.length && !profileLoading) {
-      setMessages([
-        {
-          id: "intro",
-          role: "assistant",
-          content: copy.chat.intro(profile?.companyName),
-        },
-      ]);
-    }
-  }, [copy.chat, messages.length, profile?.companyName, profileLoading]);
-
-  useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -180,27 +168,48 @@ export default function BusinessDashboard() {
             </header>
             <div className="flex-1 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
               <div className="rounded-2xl border border-muted-foreground/15 bg-white p-4 flex-1 overflow-y-auto space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}
-                  >
+                {!messages.length && (
+                  <div className="flex h-full items-center justify-center text-center">
+                    <div className="space-y-2 text-sm text-muted-foreground max-w-xl">
+                      <div className="text-base font-semibold text-foreground">
+                        {copy.chat.intro(profile?.companyName)}
+                      </div>
+                      <p>{copy.chat.tip}</p>
+                    </div>
+                  </div>
+                )}
+                {messages.map((message, index) => {
+                  const isFirstUserMessage = index === 0 && message.role === "user";
+                  const alignment =
+                    isFirstUserMessage
+                      ? "justify-center"
+                      : message.role === "assistant"
+                        ? "justify-start"
+                        : "justify-end";
+                  const bubbleClasses = isFirstUserMessage
+                    ? "bg-muted text-foreground border border-muted-foreground/20 shadow-sm"
+                    : message.role === "assistant"
+                      ? "bg-white text-foreground border border-muted-foreground/30 shadow-sm"
+                      : "bg-primary text-primary-foreground";
+
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex ${alignment}`}
+                    >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${
-                          message.role === "assistant"
-                            ? "bg-white text-foreground border border-muted-foreground/30 shadow-sm"
-                            : "bg-primary text-primary-foreground"
-                        }`}
+                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${bubbleClasses}`}
                       >
                         {message.content}
                       </div>
                     </div>
-                  ))}
-                  {chatMutation.isPending && (
-                    <div className="text-xs text-muted-foreground">{copy.chat.sending}</div>
-                  )}
-                  <div ref={scrollRef} />
-                </div>
+                  );
+                })}
+                {chatMutation.isPending && (
+                  <div className="text-xs text-muted-foreground">{copy.chat.sending}</div>
+                )}
+                <div ref={scrollRef} />
+              </div>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();

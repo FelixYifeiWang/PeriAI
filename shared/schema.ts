@@ -70,6 +70,33 @@ export const insertBusinessProfileSchema = createInsertSchema(businessProfiles).
   updatedAt: true,
 });
 
+// Campaigns created by business users
+export const campaigns = pgTable("campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  productDetails: text("product_details").notNull(),
+  campaignGoal: text("campaign_goal").notNull(),
+  targetAudience: text("target_audience").notNull(),
+  budgetMin: integer("budget_min"),
+  budgetMax: integer("budget_max"),
+  timeline: text("timeline").notNull(),
+  deliverables: text("deliverables").notNull(),
+  additionalRequirements: text("additional_requirements"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCampaignSchema = createInsertSchema(campaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type Campaign = typeof campaigns.$inferSelect;
+
 // Influencer preferences/instructions
 export const influencerPreferences = pgTable("influencer_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

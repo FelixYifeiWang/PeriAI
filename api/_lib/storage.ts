@@ -4,6 +4,7 @@ import {
   inquiries,
   messages,
   businessProfiles,
+  campaigns,
   type User,
   type UpsertUser,
   type InfluencerPreferences,
@@ -14,6 +15,8 @@ import {
   type InsertMessage,
   type BusinessProfile,
   type InsertBusinessProfile,
+  type Campaign,
+  type InsertCampaign,
 } from "../../shared/schema.js";
 import { db } from "./db.js";
 import { eq, and, desc, isNotNull, lte } from "drizzle-orm";
@@ -30,6 +33,9 @@ export interface IStorage {
   updatePassword(userId: string, passwordHash: string): Promise<User>;
   getBusinessProfile(userId: string): Promise<BusinessProfile | undefined>;
   upsertBusinessProfile(profile: InsertBusinessProfile): Promise<BusinessProfile>;
+  getCampaignsByBusiness(businessId: string): Promise<Campaign[]>;
+  getCampaign(id: string): Promise<Campaign | undefined>;
+  createCampaign(campaign: InsertCampaign): Promise<Campaign>;
   
   // Influencer preferences
   getInfluencerPreferences(userId: string): Promise<InfluencerPreferences | undefined>;
@@ -139,6 +145,24 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+    return result;
+  }
+
+  async getCampaignsByBusiness(businessId: string): Promise<Campaign[]> {
+    return await db
+      .select()
+      .from(campaigns)
+      .where(eq(campaigns.businessId, businessId))
+      .orderBy(desc(campaigns.createdAt));
+  }
+
+  async getCampaign(id: string): Promise<Campaign | undefined> {
+    const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+    return campaign;
+  }
+
+  async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
+    const [result] = await db.insert(campaigns).values(campaign).returning();
     return result;
   }
 
