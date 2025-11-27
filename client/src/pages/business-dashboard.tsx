@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEventHandler } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { BusinessProfile } from "@shared/schema";
+import type { BusinessProfile, Campaign } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/providers/language-provider";
@@ -110,6 +110,15 @@ export default function BusinessDashboard() {
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
+  });
+  const { data: campaigns = [] } = useQuery<Campaign[]>({
+    queryKey: ["/api/business/campaigns"],
+    queryFn: async () => {
+      const res = await fetch("/api/business/campaigns", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load campaigns");
+      return res.json();
+    },
+    staleTime: 60_000,
   });
 
   const chatMutation = useMutation({
@@ -514,6 +523,9 @@ export default function BusinessDashboard() {
                   </Link>
                 )}
               </div>
+              <div className="mt-4">
+                <CampaignStatusList campaigns={campaigns} />
+              </div>
             </div>
           </section>
         </div>
@@ -521,3 +533,41 @@ export default function BusinessDashboard() {
     </div>
   );
 }
+
+function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
+  const badgeClass = (status: Campaign["status"]) =>
+    status === "finished"
+      ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+      : "bg-slate-100 text-slate-700 border border-slate-200";
+
+  return (
+    <div className="rounded-2xl border border-muted-foreground/15 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="px-5 py-4 border-b border-muted-foreground/10">
+        <h3 className="text-md font-semibold tracking-tight text-foreground">Campaigns</h3>
+        <p className="text-sm text-muted-foreground">Status across your campaigns</p>
+      </div>
+      <div className="divide-y divide-muted-foreground/10">
+        {campaigns.length === 0 ? (
+          <div className="px-5 py-4 text-sm text-muted-foreground">No campaigns yet.</div>
+        ) : (
+          campaigns.map((campaign) => (
+            <div key={campaign.id} className="px-5 py-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {campaign.campaignGoal || "Untitled campaign"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {campaign.productDetails || "Pending details"}
+                </p>
+              </div>
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
+              >
+                {campaign.status === "finished" ? "Finished" : "Pending"}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
