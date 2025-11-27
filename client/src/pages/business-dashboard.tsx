@@ -249,6 +249,7 @@ export default function BusinessDashboard() {
     const submitDraft = {
       ...draft,
       additionalRequirements: draft.additionalRequirements || undefined,
+      status: "pending" as const,
     };
 
     try {
