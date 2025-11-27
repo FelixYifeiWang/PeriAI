@@ -32,6 +32,7 @@ export default function BusinessDashboard() {
     deliverables: "",
     additionalRequirements: "",
   });
+  const [campaignProcessing, setCampaignProcessing] = useState(false);
 
   const missingLabels: Record<keyof typeof campaignDraft, string> = {
     productDetails: "Product/offer details",
@@ -166,6 +167,7 @@ export default function BusinessDashboard() {
     if (campaignMode) {
       (async () => {
         try {
+          setCampaignProcessing(true);
           const response = await apiRequest("POST", "/api/business/campaigns/extract", {
             content,
             draft: campaignDraft,
@@ -184,12 +186,25 @@ export default function BusinessDashboard() {
             try {
               const saveRes = await apiRequest("POST", "/api/business/campaigns", submitDraft);
               const saved = await saveRes.json();
+              const summary = [
+                "All set—I saved your campaign.",
+                "",
+                "Summary:",
+                `- Product: ${saved.productDetails || updatedDraft.productDetails || "Not provided"}`,
+                `- Goal: ${saved.campaignGoal || updatedDraft.campaignGoal || "Not provided"}`,
+                `- Audience: ${saved.targetAudience || updatedDraft.targetAudience || "Not provided"}`,
+                `- Budget: ${formatBudget(saved.budgetMin ?? updatedDraft.budgetMin, saved.budgetMax ?? updatedDraft.budgetMax)}`,
+                `- Timeline: ${saved.timeline || updatedDraft.timeline || "Not provided"}`,
+                `- Deliverables: ${saved.deliverables || updatedDraft.deliverables || "Not provided"}`,
+                `- Additional: ${saved.additionalRequirements || updatedDraft.additionalRequirements || "None"}`,
+              ].join("\n");
+
               setMessages((prev) => [
                 ...prev,
                 {
                   id: crypto.randomUUID(),
                   role: "assistant",
-              content: `All set—I saved your campaign. Goal: ${saved.campaignGoal || updatedDraft.campaignGoal}. Deliverables: ${saved.deliverables || updatedDraft.deliverables}.`,
+                  content: summary,
                 },
               ]);
             } catch (saveError) {
@@ -206,6 +221,7 @@ export default function BusinessDashboard() {
                 deliverables: "",
                 additionalRequirements: "",
               });
+              setCampaignProcessing(false);
               setTimeout(() => inputRef.current?.focus(), 0);
             }
             return;
@@ -223,9 +239,11 @@ export default function BusinessDashboard() {
               content: `Thanks for those details. To complete the campaign, could you share: ${missingFriendly}?`,
             },
           ]);
+          setCampaignProcessing(false);
           setTimeout(() => inputRef.current?.focus(), 0);
         } catch (error) {
           toast({ variant: "destructive", title: "Failed to process campaign input" });
+          setCampaignProcessing(false);
         }
       })();
       return;
@@ -244,6 +262,13 @@ export default function BusinessDashboard() {
       event.preventDefault();
       handleSend();
     }
+  };
+
+  const formatBudget = (min?: number, max?: number) => {
+    if (min != null && max != null) return `$${min} - $${max}`;
+    if (min != null) return `$${min}+`;
+    if (max != null) return `Up to $${max}`;
+    return "Not provided";
   };
 
   const handleStartCampaign = () => {
@@ -407,7 +432,7 @@ export default function BusinessDashboard() {
                       onKeyDown={handleKeyDown}
                       placeholder={copy.chat.placeholder}
                       ref={inputRef}
-                      className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible-ring-offset-0"
                       disabled={chatMutation.isPending}
                       rows={1}
                     />
@@ -430,10 +455,13 @@ export default function BusinessDashboard() {
                       Start a campaign
                     </Button>
                   </div>
+                  {campaignProcessing && (
+                    <div className="text-xs text-muted-foreground text-center">Processing your details…</div>
+                  )}
                 </form>
               )}
-            </div>
-          </section>
+    </div>
+  </section>
 
           <section className="flex flex-col h-full bg-white/80 backdrop-blur">
             <header className="px-6 py-4 border-b border-muted-foreground/10">
