@@ -231,7 +231,18 @@ export default function BusinessDashboard() {
   const handleFlexibleCampaign = async () => {
     if (!campaignMode) return;
     setCampaignProcessing(true);
-    await finalizeCampaign(campaignDraft);
+
+    const requiredFallback = "Flexible";
+    const filledDraft = {
+      ...campaignDraft,
+      productDetails: campaignDraft.productDetails || requiredFallback,
+      campaignGoal: campaignDraft.campaignGoal || requiredFallback,
+      targetAudience: campaignDraft.targetAudience || requiredFallback,
+      timeline: campaignDraft.timeline || requiredFallback,
+      deliverables: campaignDraft.deliverables || requiredFallback,
+    };
+
+    await finalizeCampaign(filledDraft);
   };
 
   const finalizeCampaign = async (draft: typeof campaignDraft) => {
