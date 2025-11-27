@@ -22,7 +22,6 @@ export default function BusinessDashboard() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [campaignMode, setCampaignMode] = useState(false);
-  const [campaignStep, setCampaignStep] = useState(0);
   const [campaignDraft, setCampaignDraft] = useState({
     productDetails: "",
     campaignGoal: "",
@@ -34,15 +33,16 @@ export default function BusinessDashboard() {
     additionalRequirements: "",
   });
 
-  const campaignSteps: Array<{ key: keyof typeof campaignDraft; prompt: string }> = [
-    { key: "productDetails", prompt: "Product/offer details?" },
-    { key: "campaignGoal", prompt: "Campaign goal?" },
-    { key: "targetAudience", prompt: "Target audience (demographics, age, region)?" },
-    { key: "budgetMin", prompt: "Budget range? (e.g., 2000-5000)" },
-    { key: "timeline", prompt: "Timeline and key dates?" },
-    { key: "deliverables", prompt: "Deliverables you expect?" },
-    { key: "additionalRequirements", prompt: "Any additional requirements or constraints? (optional)" },
-  ];
+  const missingLabels: Record<keyof typeof campaignDraft, string> = {
+    productDetails: "Product/offer details",
+    campaignGoal: "Campaign goal",
+    targetAudience: "Target audience (demographics, age, region)",
+    budgetMin: "Budget range",
+    budgetMax: "Budget range",
+    timeline: "Timeline",
+    deliverables: "Deliverables",
+    additionalRequirements: "Additional requirements or constraints",
+  };
 
   const copy = useMemo(
     () =>
@@ -164,83 +164,70 @@ export default function BusinessDashboard() {
     setInput("");
 
     if (campaignMode) {
-      const updatedDraft = { ...campaignDraft };
-      const step = campaignSteps[campaignStep];
+      (async () => {
+        try {
+          const response = await apiRequest("POST", "/api/business/campaigns/extract", {
+            content,
+            draft: campaignDraft,
+          });
+          const result = (await response.json()) as { fields: typeof campaignDraft; missing: string[] };
+          const updatedDraft = result.fields;
+          const missing = result.missing;
+          setCampaignDraft(updatedDraft);
 
-      if (step.key === "budgetMin") {
-        const { min, max } = parseBudgetRange(content);
-        updatedDraft.budgetMin = min;
-        updatedDraft.budgetMax = max;
-      } else if (step.key === "additionalRequirements") {
-        updatedDraft.additionalRequirements = content.toLowerCase() === "none" ? "" : content;
-      } else if (step.key === "productDetails") {
-        updatedDraft.productDetails = content;
-      } else if (step.key === "campaignGoal") {
-        updatedDraft.campaignGoal = content;
-      } else if (step.key === "targetAudience") {
-        updatedDraft.targetAudience = content;
-      } else if (step.key === "timeline") {
-        updatedDraft.timeline = content;
-      } else if (step.key === "deliverables") {
-        updatedDraft.deliverables = content;
-      }
+          if (missing.length === 0) {
+            const submitDraft = {
+              ...updatedDraft,
+              additionalRequirements: updatedDraft.additionalRequirements || undefined,
+            };
 
-      const isLastStep = campaignStep >= campaignSteps.length - 1;
+            try {
+              const saveRes = await apiRequest("POST", "/api/business/campaigns", submitDraft);
+              const saved = await saveRes.json();
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: crypto.randomUUID(),
+                  role: "assistant",
+                  content: `Campaign saved. Goal: ${saved.campaignGoal || updatedDraft.campaignGoal}. Deliverables: ${saved.deliverables || updatedDraft.deliverables}.`,
+                },
+              ]);
+            } catch (saveError) {
+              toast({ variant: "destructive", title: "Failed to save campaign" });
+            } finally {
+              setCampaignMode(false);
+              setCampaignDraft({
+                productDetails: "",
+                campaignGoal: "",
+                targetAudience: "",
+                budgetMin: undefined,
+                budgetMax: undefined,
+                timeline: "",
+                deliverables: "",
+                additionalRequirements: "",
+              });
+              setTimeout(() => inputRef.current?.focus(), 0);
+            }
+            return;
+          }
 
-      if (!isLastStep) {
-        setCampaignDraft(updatedDraft);
-        setCampaignStep((prev) => prev + 1);
-        setMessages((prev) => [
-          ...prev,
-          { id: crypto.randomUUID(), role: "assistant", content: campaignSteps[campaignStep + 1].prompt },
-        ]);
-        setTimeout(() => inputRef.current?.focus(), 0);
-        return;
-      }
+          const missingFriendly = missing
+            .map((key) => (key in missingLabels ? missingLabels[key as keyof typeof campaignDraft] : key))
+            .join(", ");
 
-      // Finalize campaign
-      const submitDraft = {
-        productDetails: updatedDraft.productDetails,
-        campaignGoal: updatedDraft.campaignGoal,
-        targetAudience: updatedDraft.targetAudience,
-        budgetMin: updatedDraft.budgetMin,
-        budgetMax: updatedDraft.budgetMax,
-        timeline: updatedDraft.timeline,
-        deliverables: updatedDraft.deliverables,
-        additionalRequirements: updatedDraft.additionalRequirements || undefined,
-      };
-
-      apiRequest("POST", "/api/business/campaigns", submitDraft)
-        .then((res) => res.json())
-        .then((saved) => {
           setMessages((prev) => [
             ...prev,
             {
               id: crypto.randomUUID(),
               role: "assistant",
-              content: `Campaign saved. Goal: ${saved.campaignGoal || updatedDraft.campaignGoal}. Deliverables: ${saved.deliverables || updatedDraft.deliverables}.`,
+              content: `Thanks. I still need: ${missingFriendly}. Share them in one message.`,
             },
           ]);
-        })
-        .catch(() => {
-          toast({ variant: "destructive", title: "Failed to save campaign" });
-        })
-        .finally(() => {
-          setCampaignMode(false);
-          setCampaignStep(0);
-          setCampaignDraft({
-            productDetails: "",
-            campaignGoal: "",
-            targetAudience: "",
-            budgetMin: undefined,
-            budgetMax: undefined,
-            timeline: "",
-            deliverables: "",
-            additionalRequirements: "",
-          });
           setTimeout(() => inputRef.current?.focus(), 0);
-        });
-
+        } catch (error) {
+          toast({ variant: "destructive", title: "Failed to process campaign input" });
+        }
+      })();
       return;
     }
 
@@ -258,14 +245,6 @@ export default function BusinessDashboard() {
       handleSend();
     }
   };
-
-  function parseBudgetRange(inputValue: string): { min?: number; max?: number } {
-    const numbers = (inputValue.match(/\d+/g) || []).map((n) => Number.parseInt(n, 10)).filter(Number.isFinite);
-    if (!numbers.length) return {};
-    if (numbers.length === 1) return { min: numbers[0] };
-    const [first, second] = numbers;
-    return { min: Math.min(first, second), max: Math.max(first, second) };
-  }
 
   const handleStartCampaign = () => {
     const campaignGuide = [
@@ -290,11 +269,14 @@ export default function BusinessDashboard() {
       additionalRequirements: "",
     });
     setCampaignMode(true);
-    setCampaignStep(0);
     setMessages((prev) => [
       ...prev,
       { id: crypto.randomUUID(), role: "assistant", content: campaignGuide },
-      { id: crypto.randomUUID(), role: "assistant", content: campaignSteps[0].prompt },
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "Drop all the details you have in one message. I'll fill in what I can and ask only for what's missing.",
+      },
     ]);
 
     setTimeout(() => {
