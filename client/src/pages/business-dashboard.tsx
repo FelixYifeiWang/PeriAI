@@ -34,6 +34,7 @@ export default function BusinessDashboard() {
   });
   const [campaignProcessing, setCampaignProcessing] = useState(false);
   const [campaignMissing, setCampaignMissing] = useState<string[]>([]);
+  const [showComposer, setShowComposer] = useState(true);
 
   const missingLabels: Record<keyof typeof campaignDraft, string> = {
     productDetails: "Product/offer details",
@@ -276,6 +277,7 @@ export default function BusinessDashboard() {
           content: summary,
         },
       ]);
+      setShowComposer(false);
     } catch (saveError) {
       toast({ variant: "destructive", title: "Failed to save campaign" });
     } finally {
@@ -320,6 +322,7 @@ export default function BusinessDashboard() {
     });
     setCampaignMode(true);
     setCampaignMissing([]);
+    setShowComposer(true);
     setMessages((prev) => [
       ...prev,
       { id: crypto.randomUUID(), role: "assistant", content: campaignGuide },
@@ -333,6 +336,26 @@ export default function BusinessDashboard() {
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
+  };
+
+  const handleNewConversation = () => {
+    setMessages([]);
+    setInput("");
+    setCampaignMode(false);
+    setCampaignMissing([]);
+    setCampaignProcessing(false);
+    setShowComposer(true);
+    setCampaignDraft({
+      productDetails: "",
+      campaignGoal: "",
+      targetAudience: "",
+      budgetMin: undefined,
+      budgetMax: undefined,
+      timeline: "",
+      deliverables: "",
+      additionalRequirements: "",
+    });
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   return (
@@ -372,52 +395,62 @@ export default function BusinessDashboard() {
               <div className="rounded-3xl border border-slate-200 bg-white p-4 flex-1 overflow-y-auto space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
                 {!hasMessages && (
                   <div className="flex h-full items-center justify-center">
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSend();
-                      }}
-                      className="w-full max-w-xl space-y-3 text-center"
-                    >
-                      {copy.chat.intro(profile?.companyName) ? (
-                        <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                          {copy.chat.intro(profile?.companyName)}
-                        </h2>
-                      ) : null}
-                      <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                        <Textarea
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          placeholder={copy.chat.placeholder}
-                          ref={inputRef}
-                          className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible:ring-offset-0"
-                          disabled={chatMutation.isPending}
-                          rows={1}
-                          autoFocus
-                        />
-                        <Button
-                          type="submit"
-                          disabled={!input.trim() || chatMutation.isPending}
-                          className="h-8 w-8 rounded-full bg-black p-0 text-white shadow-sm"
-                          size="icon"
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {!campaignMode && !campaignProcessing && !hasMessages && (
-                        <div className="flex justify-center">
+                    {showComposer ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleSend();
+                        }}
+                        className="w-full max-w-xl space-y-3 text-center"
+                      >
+                        {copy.chat.intro(profile?.companyName) ? (
+                          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                            {copy.chat.intro(profile?.companyName)}
+                          </h2>
+                        ) : null}
+                        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                          <Textarea
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={copy.chat.placeholder}
+                            ref={inputRef}
+                            className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible:ring-offset-0"
+                            disabled={chatMutation.isPending}
+                            rows={1}
+                            autoFocus
+                          />
                           <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleStartCampaign}
-                            className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
+                            type="submit"
+                            disabled={!input.trim() || chatMutation.isPending}
+                            className="h-8 w-8 rounded-full bg-black p-0 text-white shadow-sm"
+                            size="icon"
                           >
-                            Start a campaign
+                            <Send className="h-4 w-4" />
                           </Button>
                         </div>
-                      )}
-                    </form>
+                        {!campaignMode && !campaignProcessing && !hasMessages && (
+                          <div className="flex justify-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleStartCampaign}
+                              className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
+                              disabled={campaignProcessing}
+                            >
+                              Start a campaign
+                            </Button>
+                          </div>
+                        )}
+                      </form>
+                    ) : (
+                      <div className="space-y-3 text-center">
+                        <p className="text-sm text-muted-foreground">Conversation closed.</p>
+                        <Button variant="outline" size="sm" className="rounded-full" onClick={handleNewConversation}>
+                          Start a new conversation
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {hasMessages && messages.map((message) => {
@@ -463,47 +496,43 @@ export default function BusinessDashboard() {
                 <div ref={scrollRef} />
               </div>
               {hasMessages && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSend();
-                  }}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                    <Textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={copy.chat.placeholder}
-                      ref={inputRef}
-                      className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible-ring-offset-0"
-                      disabled={chatMutation.isPending}
-                      rows={1}
-                    />
-                    <Button
-                      type="submit"
-                      disabled={!input.trim() || chatMutation.isPending}
-                      className="h-8 w-8 rounded-full bg-black p-0 text-white shadow-sm"
-                      size="icon"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {!campaignMode && !campaignProcessing && !hasMessages && (
-                    <div className="flex justify-center gap-3">
+                showComposer ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSend();
+                    }}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                      <Textarea
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={copy.chat.placeholder}
+                        ref={inputRef}
+                        className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible-ring-offset-0"
+                        disabled={chatMutation.isPending}
+                        rows={1}
+                      />
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleStartCampaign}
-                        className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
-                        disabled={campaignProcessing}
+                        type="submit"
+                        disabled={!input.trim() || chatMutation.isPending}
+                        className="h-8 w-8 rounded-full bg-black p-0 text-white shadow-sm"
+                        size="icon"
                       >
-                        Start a campaign
+                        <Send className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
-                </form>
+                  </form>
+                ) : (
+                  <div className="space-y-3 text-center">
+                    <p className="text-sm text-muted-foreground">Conversation closed.</p>
+                    <Button variant="outline" size="sm" className="rounded-full" onClick={handleNewConversation}>
+                      Start a new conversation
+                    </Button>
+                  </div>
+                )
               )}
             </div>
   </section>
