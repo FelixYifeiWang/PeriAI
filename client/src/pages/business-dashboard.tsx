@@ -33,6 +33,7 @@ export default function BusinessDashboard() {
     additionalRequirements: "",
   });
   const [campaignProcessing, setCampaignProcessing] = useState(false);
+  const [campaignMissing, setCampaignMissing] = useState<string[]>([]);
 
   const missingLabels: Record<keyof typeof campaignDraft, string> = {
     productDetails: "Product/offer details",
@@ -176,54 +177,10 @@ export default function BusinessDashboard() {
           const updatedDraft = result.fields;
           const missing = result.missing;
           setCampaignDraft(updatedDraft);
+          setCampaignMissing(missing);
 
           if (missing.length === 0) {
-            const submitDraft = {
-              ...updatedDraft,
-              additionalRequirements: updatedDraft.additionalRequirements || undefined,
-            };
-
-            try {
-              const saveRes = await apiRequest("POST", "/api/business/campaigns", submitDraft);
-              const saved = await saveRes.json();
-              const summary = [
-                "All set—I saved your campaign.",
-                "",
-                "Summary:",
-                `- Product: ${saved.productDetails || updatedDraft.productDetails || "Not provided"}`,
-                `- Goal: ${saved.campaignGoal || updatedDraft.campaignGoal || "Not provided"}`,
-                `- Audience: ${saved.targetAudience || updatedDraft.targetAudience || "Not provided"}`,
-                `- Budget: ${formatBudget(saved.budgetMin ?? updatedDraft.budgetMin, saved.budgetMax ?? updatedDraft.budgetMax)}`,
-                `- Timeline: ${saved.timeline || updatedDraft.timeline || "Not provided"}`,
-                `- Deliverables: ${saved.deliverables || updatedDraft.deliverables || "Not provided"}`,
-                `- Additional: ${saved.additionalRequirements || updatedDraft.additionalRequirements || "None"}`,
-              ].join("\n");
-
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: crypto.randomUUID(),
-                  role: "assistant",
-                  content: summary,
-                },
-              ]);
-            } catch (saveError) {
-              toast({ variant: "destructive", title: "Failed to save campaign" });
-            } finally {
-              setCampaignMode(false);
-              setCampaignDraft({
-                productDetails: "",
-                campaignGoal: "",
-                targetAudience: "",
-                budgetMin: undefined,
-                budgetMax: undefined,
-                timeline: "",
-                deliverables: "",
-                additionalRequirements: "",
-              });
-              setCampaignProcessing(false);
-              setTimeout(() => inputRef.current?.focus(), 0);
-            }
+            await finalizeCampaign(updatedDraft);
             return;
           }
 
@@ -271,6 +228,62 @@ export default function BusinessDashboard() {
     return "Not provided";
   };
 
+  const handleFlexibleCampaign = async () => {
+    if (!campaignMode) return;
+    setCampaignProcessing(true);
+    await finalizeCampaign(campaignDraft);
+  };
+
+  const finalizeCampaign = async (draft: typeof campaignDraft) => {
+    const submitDraft = {
+      ...draft,
+      additionalRequirements: draft.additionalRequirements || undefined,
+    };
+
+    try {
+      const saveRes = await apiRequest("POST", "/api/business/campaigns", submitDraft);
+      const saved = await saveRes.json();
+      const summary = [
+        "All set—I saved your campaign.",
+        "",
+        "Summary:",
+        `- Product: ${saved.productDetails || draft.productDetails || "Not provided"}`,
+        `- Goal: ${saved.campaignGoal || draft.campaignGoal || "Not provided"}`,
+        `- Audience: ${saved.targetAudience || draft.targetAudience || "Not provided"}`,
+        `- Budget: ${formatBudget(saved.budgetMin ?? draft.budgetMin, saved.budgetMax ?? draft.budgetMax)}`,
+        `- Timeline: ${saved.timeline || draft.timeline || "Not provided"}`,
+        `- Deliverables: ${saved.deliverables || draft.deliverables || "Not provided"}`,
+        `- Additional: ${saved.additionalRequirements || draft.additionalRequirements || "None"}`,
+      ].join("\n");
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: summary,
+        },
+      ]);
+    } catch (saveError) {
+      toast({ variant: "destructive", title: "Failed to save campaign" });
+    } finally {
+      setCampaignMode(false);
+      setCampaignMissing([]);
+      setCampaignDraft({
+        productDetails: "",
+        campaignGoal: "",
+        targetAudience: "",
+        budgetMin: undefined,
+        budgetMax: undefined,
+        timeline: "",
+        deliverables: "",
+        additionalRequirements: "",
+      });
+      setCampaignProcessing(false);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  };
+
   const handleStartCampaign = () => {
     const campaignGuide = [
       "Happy to help you set up a campaign. Share whatever you already have, and I'll fill in the blanks:",
@@ -294,6 +307,7 @@ export default function BusinessDashboard() {
       additionalRequirements: "",
     });
     setCampaignMode(true);
+    setCampaignMissing([]);
     setMessages((prev) => [
       ...prev,
       { id: crypto.randomUUID(), role: "assistant", content: campaignGuide },
@@ -412,7 +426,7 @@ export default function BusinessDashboard() {
                     </div>
                   );
                 })}
-                {chatMutation.isPending && (
+                {(chatMutation.isPending || campaignProcessing) && (
                   <div className="text-xs text-muted-foreground">{copy.chat.sending}</div>
                 )}
                 <div ref={scrollRef} />
@@ -445,22 +459,34 @@ export default function BusinessDashboard() {
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center gap-3">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleStartCampaign}
                       className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
+                      disabled={campaignProcessing}
                     >
                       Start a campaign
                     </Button>
+                    {campaignMode && campaignMissing.length > 0 && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleFlexibleCampaign}
+                        className="rounded-full px-4 py-2 text-sm font-medium shadow-sm"
+                        disabled={campaignProcessing}
+                      >
+                        Mark remaining as flexible
+                      </Button>
+                    )}
                   </div>
                   {campaignProcessing && (
                     <div className="text-xs text-muted-foreground text-center">Processing your details…</div>
                   )}
                 </form>
               )}
-    </div>
+            </div>
   </section>
 
           <section className="flex flex-col h-full bg-white/80 backdrop-blur">
