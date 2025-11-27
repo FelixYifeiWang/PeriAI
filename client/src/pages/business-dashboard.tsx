@@ -219,11 +219,10 @@ export default function BusinessDashboard() {
                         <Button
                           type="submit"
                           disabled={!input.trim() || chatMutation.isPending}
-                          className="absolute bottom-2 right-2 gap-2"
-                          size="sm"
+                          className="absolute bottom-2 right-2 h-9 w-9 rounded-full p-0 shadow-sm"
+                          size="icon"
                         >
                           <Send className="h-4 w-4" />
-                          {chatMutation.isPending ? copy.chat.sending : copy.chat.send}
                         </Button>
                       </div>
                     </form>
@@ -274,11 +273,10 @@ export default function BusinessDashboard() {
                     <Button
                       type="submit"
                       disabled={!input.trim() || chatMutation.isPending}
-                      className="absolute bottom-2 right-2 gap-2"
-                      size="sm"
+                      className="absolute bottom-2 right-2 h-9 w-9 rounded-full p-0 shadow-sm"
+                      size="icon"
                     >
                       <Send className="h-4 w-4" />
-                      {chatMutation.isPending ? copy.chat.sending : copy.chat.send}
                     </Button>
                   </div>
                 </form>
