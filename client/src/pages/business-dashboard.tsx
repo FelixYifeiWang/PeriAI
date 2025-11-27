@@ -229,7 +229,12 @@ export default function BusinessDashboard() {
                         </Button>
                       </div>
                       <div className="flex justify-center">
-                        <Button variant="outline" size="sm" onClick={handleStartCampaign}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleStartCampaign}
+                          className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
+                        >
                           Start a campaign
                         </Button>
                       </div>
@@ -289,7 +294,12 @@ export default function BusinessDashboard() {
                     </Button>
                   </div>
                   <div className="flex justify-center">
-                    <Button variant="outline" size="sm" onClick={handleStartCampaign}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleStartCampaign}
+                      className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
+                    >
                       Start a campaign
                     </Button>
                   </div>
