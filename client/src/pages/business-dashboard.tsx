@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/providers/language-provider";
 import LanguageToggle from "@/components/language-toggle";
 import { Link } from "wouter";
-import { LogOut, Send, Sparkles, Plus, Mic, AudioLines } from "lucide-react";
+import { LogOut, Send, Sparkles, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { isBusinessProfileComplete } from "@/lib/businessProfile";
 import { Textarea } from "@/components/ui/textarea";
@@ -215,14 +215,13 @@ export default function BusinessDashboard() {
                           rows={1}
                           autoFocus
                         />
-                        <Mic className="h-5 w-5 text-slate-400" />
                         <Button
                           type="submit"
                           disabled={!input.trim() || chatMutation.isPending}
                           className="h-10 w-10 rounded-full bg-black p-0 text-white shadow-md"
                           size="icon"
                         >
-                          <AudioLines className="h-4 w-4" />
+                          <Send className="h-4 w-4" />
                         </Button>
                       </div>
                     </form>
@@ -272,14 +271,13 @@ export default function BusinessDashboard() {
                       disabled={chatMutation.isPending}
                       rows={1}
                     />
-                    <Mic className="h-5 w-5 text-slate-400" />
                     <Button
                       type="submit"
                       disabled={!input.trim() || chatMutation.isPending}
                       className="h-10 w-10 rounded-full bg-black p-0 text-white shadow-md"
                       size="icon"
                     >
-                      <AudioLines className="h-4 w-4" />
+                      <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </form>
