@@ -384,15 +384,15 @@ export default function BusinessDashboard() {
 
       <main className="w-full px-0 pb-0 h-[calc(100vh-96px)] overflow-hidden">
         <div className="grid lg:grid-cols-[3fr,2fr] h-full w-full">
-          <section className="flex flex-col h-full border-r border-muted-foreground/10 bg-white/80 backdrop-blur">
+          <section className="flex flex-col h-full min-h-0 border-r border-muted-foreground/10 bg-white/80 backdrop-blur">
             <header className="flex items-center gap-3 px-6 py-4 border-b border-muted-foreground/10">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                 <Sparkles className="h-5 w-5 text-primary" />
               </span>
               <h2 className="text-lg font-semibold tracking-tight text-foreground">{copy.chat.title}</h2>
             </header>
-            <div className="flex-1 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
-              <div className="rounded-3xl border border-slate-200 bg-white p-4 flex-1 overflow-y-auto space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+            <div className="flex-1 min-h-0 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
+              <div className="rounded-3xl border border-slate-200 bg-white p-4 flex-1 min-h-0 overflow-y-auto space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
                 {!hasMessages && (
                   <div className="flex h-full items-center justify-center">
                     {showComposer ? (
@@ -537,11 +537,11 @@ export default function BusinessDashboard() {
             </div>
   </section>
 
-          <section className="flex flex-col h-full bg-white/80 backdrop-blur">
+          <section className="flex flex-col h-full min-h-0 bg-white/80 backdrop-blur">
             <header className="px-6 py-4 border-b border-muted-foreground/10">
               <h2 className="text-lg font-semibold tracking-tight text-foreground">{copy.statusCard.title}</h2>
             </header>
-            <div className="flex-1 px-6 pb-6 overflow-y-auto">
+            <div className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto">
               <div className="rounded-2xl border border-muted-foreground/15 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                 <p className="text-lg font-semibold">
                   {profileCompleted ? copy.statusCard.ready : copy.completeProfile}
