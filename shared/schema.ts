@@ -84,12 +84,14 @@ export const campaigns = pgTable("campaigns", {
   timeline: text("timeline").notNull(),
   deliverables: text("deliverables").notNull(),
   additionalRequirements: text("additional_requirements"),
+  status: varchar("status", { enum: ["pending", "finished"] }).notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
+  status: true,
   createdAt: true,
   updatedAt: true,
 });

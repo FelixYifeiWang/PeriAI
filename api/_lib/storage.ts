@@ -36,6 +36,7 @@ export interface IStorage {
   getCampaignsByBusiness(businessId: string): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
+  updateCampaignStatus(id: string, status: "pending" | "finished"): Promise<Campaign>;
   
   // Influencer preferences
   getInfluencerPreferences(userId: string): Promise<InfluencerPreferences | undefined>;
@@ -163,6 +164,15 @@ export class DatabaseStorage implements IStorage {
 
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
     const [result] = await db.insert(campaigns).values(campaign).returning();
+    return result;
+  }
+
+  async updateCampaignStatus(id: string, status: "pending" | "finished"): Promise<Campaign> {
+    const [result] = await db
+      .update(campaigns)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(campaigns.id, id))
+      .returning();
     return result;
   }
 
