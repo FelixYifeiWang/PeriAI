@@ -486,17 +486,6 @@ export default function BusinessDashboard() {
                     >
                       Start a campaign
                     </Button>
-                    {campaignMode && campaignMissing.length > 0 && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleFlexibleCampaign}
-                        className="rounded-full px-4 py-2 text-sm font-medium shadow-sm"
-                        disabled={campaignProcessing}
-                      >
-                        Mark remaining as flexible
-                      </Button>
-                    )}
                   </div>
                   {campaignProcessing && (
                     <div className="text-xs text-muted-foreground text-center">Processing your details…</div>
