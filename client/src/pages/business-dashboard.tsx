@@ -404,16 +404,18 @@ export default function BusinessDashboard() {
                           <Send className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="flex justify-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleStartCampaign}
-                          className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
-                        >
-                          Start a campaign
-                        </Button>
-                      </div>
+                      {!campaignMode && (
+                        <div className="flex justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleStartCampaign}
+                            className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
+                          >
+                            Start a campaign
+                          </Button>
+                        </div>
+                      )}
                     </form>
                   </div>
                 )}
@@ -487,17 +489,19 @@ export default function BusinessDashboard() {
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex justify-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleStartCampaign}
-                      className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
-                      disabled={campaignProcessing}
-                    >
-                      Start a campaign
-                    </Button>
-                  </div>
+                  {!campaignMode && (
+                    <div className="flex justify-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleStartCampaign}
+                        className="rounded-full border-slate-300 px-4 py-2 text-sm font-medium shadow-sm hover:border-slate-400"
+                        disabled={campaignProcessing}
+                      >
+                        Start a campaign
+                      </Button>
+                    </div>
+                  )}
                   {campaignProcessing && (
                     <div className="text-xs text-muted-foreground text-center">Processing your details…</div>
                   )}
