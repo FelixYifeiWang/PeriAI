@@ -20,6 +20,7 @@ export default function BusinessDashboard() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Array<{ id: string; role: "user" | "assistant"; content: string }>>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const copy = useMemo(
     () =>
@@ -156,7 +157,25 @@ export default function BusinessDashboard() {
   };
 
   const handleStartCampaign = () => {
-    window.location.href = "/business/campaigns";
+    const campaignGuide = [
+      "I can help you set up a campaign. Please share:",
+      "- Product/offer details",
+      "- Campaign goal",
+      "- Target audience (demographics, age, region)",
+      "- Budget range",
+      "- Timeline",
+      "- Deliverables",
+      "- Additional requirements or constraints",
+    ].join("\n");
+
+    setMessages((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: "assistant", content: campaignGuide },
+    ]);
+
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
   };
 
   return (
@@ -214,6 +233,7 @@ export default function BusinessDashboard() {
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={handleKeyDown}
                           placeholder={copy.chat.placeholder}
+                          ref={inputRef}
                           className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible:ring-offset-0"
                           disabled={chatMutation.isPending}
                           rows={1}
@@ -280,6 +300,7 @@ export default function BusinessDashboard() {
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder={copy.chat.placeholder}
+                      ref={inputRef}
                       className="flex-1 min-h-[20px] resize-none border-none bg-transparent text-sm text-foreground leading-5 focus-visible:ring-0 focus-visible:ring-offset-0"
                       disabled={chatMutation.isPending}
                       rows={1}
