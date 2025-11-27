@@ -198,9 +198,9 @@ export default function BusinessDashboard() {
                         e.preventDefault();
                         handleSend();
                       }}
-                      className="w-full max-w-2xl space-y-4"
+                      className="w-full max-w-xl space-y-3"
                     >
-                      <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="space-y-1 text-sm text-muted-foreground">
                         <div className="text-base font-semibold text-foreground">
                           {copy.chat.intro(profile?.companyName)}
                         </div>
@@ -211,7 +211,7 @@ export default function BusinessDashboard() {
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={copy.chat.placeholder}
-                        className="min-h-[120px] resize-none bg-white border border-muted-foreground/20 rounded-2xl"
+                        className="min-h-[80px] resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
                         disabled={chatMutation.isPending}
                         autoFocus
                       />
@@ -224,18 +224,11 @@ export default function BusinessDashboard() {
                     </form>
                   </div>
                 )}
-                {hasMessages && messages.map((message, index) => {
-                  const isFirstUserMessage = index === 0 && message.role === "user";
-                  const alignment =
-                    isFirstUserMessage
-                      ? "justify-center"
-                      : message.role === "assistant"
-                        ? "justify-start"
-                        : "justify-end";
-                  const bubbleClasses = isFirstUserMessage
-                    ? "bg-muted text-foreground border border-muted-foreground/20 shadow-sm"
-                    : message.role === "assistant"
-                      ? "bg-white text-foreground border border-muted-foreground/30 shadow-sm"
+                {hasMessages && messages.map((message) => {
+                  const alignment = message.role === "assistant" ? "justify-start" : "justify-end";
+                  const bubbleClasses =
+                    message.role === "assistant"
+                      ? "bg-white text-foreground border border-muted-foreground/20 shadow-sm"
                       : "bg-primary text-primary-foreground";
 
                   return (
@@ -269,7 +262,7 @@ export default function BusinessDashboard() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={copy.chat.placeholder}
-                    className="min-h-[96px] resize-none bg-white border border-muted-foreground/20 rounded-2xl"
+                    className="min-h-[72px] resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
                     disabled={chatMutation.isPending}
                   />
                   <div className="flex justify-end">
