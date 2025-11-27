@@ -190,7 +190,7 @@ export default function BusinessDashboard() {
               <h2 className="text-lg font-semibold tracking-tight text-foreground">{copy.chat.title}</h2>
             </header>
             <div className="flex-1 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
-              <div className="rounded-2xl border border-muted-foreground/15 bg-white p-4 flex-1 overflow-y-auto space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <div className="flex-1 rounded-3xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/80 p-4 overflow-y-auto space-y-4 shadow-sm">
                 {!hasMessages && (
                   <div className="flex h-full items-center justify-center text-center">
                     <form
@@ -204,15 +204,14 @@ export default function BusinessDashboard() {
                         <div className="text-base font-semibold text-foreground">
                           {copy.chat.intro(profile?.companyName)}
                         </div>
-                        {copy.chat.tip ? <p>{copy.chat.tip}</p> : null}
                       </div>
-                      <div className="relative">
+                      <div className="relative rounded-2xl border border-slate-200 bg-white/80 shadow-sm px-3 pt-3 pb-10">
                         <Textarea
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={handleKeyDown}
                           placeholder={copy.chat.placeholder}
-                          className="min-h-[80px] pr-16 resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
+                          className="min-h-[72px] w-full resize-none border-none bg-transparent pr-12 text-sm leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
                           disabled={chatMutation.isPending}
                           autoFocus
                         />
@@ -232,7 +231,7 @@ export default function BusinessDashboard() {
                   const alignment = message.role === "assistant" ? "justify-start" : "justify-end";
                   const bubbleClasses =
                     message.role === "assistant"
-                      ? "bg-white text-foreground border border-muted-foreground/20 shadow-sm"
+                      ? "bg-white text-foreground border border-slate-200 shadow-sm"
                       : "bg-primary text-primary-foreground";
 
                   return (
@@ -241,7 +240,7 @@ export default function BusinessDashboard() {
                       className={`flex ${alignment}`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${bubbleClasses}`}
+                        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed whitespace-pre-wrap ${bubbleClasses}`}
                       >
                         {message.content}
                       </div>
@@ -253,6 +252,7 @@ export default function BusinessDashboard() {
                 )}
                 <div ref={scrollRef} />
               </div>
+
               {hasMessages && (
                 <form
                   onSubmit={(e) => {
@@ -261,13 +261,13 @@ export default function BusinessDashboard() {
                   }}
                   className="space-y-3"
                 >
-                  <div className="relative">
+                  <div className="relative rounded-2xl border border-slate-200 bg-white/80 shadow-sm px-3 pt-3 pb-10">
                     <Textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder={copy.chat.placeholder}
-                      className="min-h-[72px] pr-16 resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
+                      className="min-h-[72px] w-full resize-none border-none bg-transparent pr-12 text-sm leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
                       disabled={chatMutation.isPending}
                     />
                     <Button
@@ -281,7 +281,7 @@ export default function BusinessDashboard() {
                   </div>
                 </form>
               )}
-              </div>
+            </div>
           </section>
 
           <section className="flex flex-col h-full bg-white/80 backdrop-blur">
