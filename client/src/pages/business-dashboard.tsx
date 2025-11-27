@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEventHandler } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { BusinessProfile } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -122,6 +122,7 @@ export default function BusinessDashboard() {
   }
 
   const profileCompleted = isBusinessProfileComplete(profile);
+  const hasMessages = messages.length > 0;
 
   const handleLogout = async () => {
     try {
@@ -130,6 +131,28 @@ export default function BusinessDashboard() {
       console.error("Business logout failed:", error);
     } finally {
       window.location.href = "/business/login";
+    }
+  };
+
+  const handleSend = () => {
+    const content = input.trim();
+    if (!content || chatMutation.isPending) return;
+
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content }]);
+    setInput("");
+
+    const nextHistory = messages
+      .concat({ role: "user" as const, content })
+      .slice(-6)
+      .map(({ role, content }) => ({ role, content }));
+
+    chatMutation.mutate({ content, history: nextHistory });
+  };
+
+  const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSend();
     }
   };
 
@@ -168,17 +191,40 @@ export default function BusinessDashboard() {
             </header>
             <div className="flex-1 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
               <div className="rounded-2xl border border-muted-foreground/15 bg-white p-4 flex-1 overflow-y-auto space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-                {!messages.length && (
+                {!hasMessages && (
                   <div className="flex h-full items-center justify-center text-center">
-                    <div className="space-y-2 text-sm text-muted-foreground max-w-xl">
-                      <div className="text-base font-semibold text-foreground">
-                        {copy.chat.intro(profile?.companyName)}
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSend();
+                      }}
+                      className="w-full max-w-2xl space-y-4"
+                    >
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <div className="text-base font-semibold text-foreground">
+                          {copy.chat.intro(profile?.companyName)}
+                        </div>
+                        <p>{copy.chat.tip}</p>
                       </div>
-                      <p>{copy.chat.tip}</p>
-                    </div>
+                      <Textarea
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={copy.chat.placeholder}
+                        className="min-h-[120px] resize-none bg-white border border-muted-foreground/20 rounded-2xl"
+                        disabled={chatMutation.isPending}
+                        autoFocus
+                      />
+                      <div className="flex justify-center">
+                        <Button type="submit" disabled={!input.trim() || chatMutation.isPending} className="gap-2">
+                          <Send className="h-4 w-4" />
+                          {chatMutation.isPending ? copy.chat.sending : copy.chat.send}
+                        </Button>
+                      </div>
+                    </form>
                   </div>
                 )}
-                {messages.map((message, index) => {
+                {hasMessages && messages.map((message, index) => {
                   const isFirstUserMessage = index === 0 && message.role === "user";
                   const alignment =
                     isFirstUserMessage
@@ -210,32 +256,30 @@ export default function BusinessDashboard() {
                 )}
                 <div ref={scrollRef} />
               </div>
+              {hasMessages && (
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const content = input.trim();
-                    if (!content || chatMutation.isPending) return;
-                    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content }]);
-                    setInput("");
-                    const history = messages.slice(-6).map(({ role, content }) => ({ role, content }));
-                    chatMutation.mutate({ content, history });
+                    handleSend();
                   }}
-                    className="space-y-3"
-                  >
-                    <Textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder={copy.chat.placeholder}
-                      className="min-h-[96px] resize-none bg-white border border-muted-foreground/20 rounded-2xl"
-                      disabled={chatMutation.isPending}
-                    />
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={!input.trim() || chatMutation.isPending} className="gap-2">
-                        <Send className="h-4 w-4" />
+                  className="space-y-3"
+                >
+                  <Textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={copy.chat.placeholder}
+                    className="min-h-[96px] resize-none bg-white border border-muted-foreground/20 rounded-2xl"
+                    disabled={chatMutation.isPending}
+                  />
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={!input.trim() || chatMutation.isPending} className="gap-2">
+                      <Send className="h-4 w-4" />
                       {chatMutation.isPending ? copy.chat.sending : copy.chat.send}
                     </Button>
                   </div>
                 </form>
+              )}
               </div>
           </section>
 
