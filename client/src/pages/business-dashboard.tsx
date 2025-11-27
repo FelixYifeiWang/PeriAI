@@ -61,7 +61,7 @@ export default function BusinessDashboard() {
               sending: "Sending...",
               intro: (companyName?: string | null) =>
                 `Hi! I'm your brand AI. ${companyName ? `Tell me what ${companyName} needs and I'll help. ` : "Ask for anything and I'll dive in."}`,
-              tip: "The AI uses your brand profile and chat context. Ask specific questions for best results.",
+              tip: "",
               error: "Message failed. Please try again.",
             },
             settings: "Settings",
@@ -204,19 +204,24 @@ export default function BusinessDashboard() {
                         <div className="text-base font-semibold text-foreground">
                           {copy.chat.intro(profile?.companyName)}
                         </div>
-                        <p>{copy.chat.tip}</p>
+                        {copy.chat.tip ? <p>{copy.chat.tip}</p> : null}
                       </div>
-                      <Textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={copy.chat.placeholder}
-                        className="min-h-[80px] resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
-                        disabled={chatMutation.isPending}
-                        autoFocus
-                      />
-                      <div className="flex justify-center">
-                        <Button type="submit" disabled={!input.trim() || chatMutation.isPending} className="gap-2">
+                      <div className="relative">
+                        <Textarea
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder={copy.chat.placeholder}
+                          className="min-h-[80px] pr-16 resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
+                          disabled={chatMutation.isPending}
+                          autoFocus
+                        />
+                        <Button
+                          type="submit"
+                          disabled={!input.trim() || chatMutation.isPending}
+                          className="absolute bottom-2 right-2 gap-2"
+                          size="sm"
+                        >
                           <Send className="h-4 w-4" />
                           {chatMutation.isPending ? copy.chat.sending : copy.chat.send}
                         </Button>
@@ -257,16 +262,21 @@ export default function BusinessDashboard() {
                   }}
                   className="space-y-3"
                 >
-                  <Textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={copy.chat.placeholder}
-                    className="min-h-[72px] resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
-                    disabled={chatMutation.isPending}
-                  />
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={!input.trim() || chatMutation.isPending} className="gap-2">
+                  <div className="relative">
+                    <Textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={copy.chat.placeholder}
+                      className="min-h-[72px] pr-16 resize-none bg-white/80 border border-muted-foreground/15 rounded-xl text-sm shadow-sm"
+                      disabled={chatMutation.isPending}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={!input.trim() || chatMutation.isPending}
+                      className="absolute bottom-2 right-2 gap-2"
+                      size="sm"
+                    >
                       <Send className="h-4 w-4" />
                       {chatMutation.isPending ? copy.chat.sending : copy.chat.send}
                     </Button>
