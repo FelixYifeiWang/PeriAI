@@ -502,9 +502,6 @@ export default function BusinessDashboard() {
                       </Button>
                     </div>
                   )}
-                  {campaignProcessing && (
-                    <div className="text-xs text-muted-foreground text-center">Processing your details…</div>
-                  )}
                 </form>
               )}
             </div>
