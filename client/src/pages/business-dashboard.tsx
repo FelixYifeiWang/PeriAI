@@ -412,17 +412,34 @@ export default function BusinessDashboard() {
                     message.role === "assistant"
                       ? "bg-white text-foreground border border-muted-foreground/20 shadow-sm"
                       : "bg-primary text-primary-foreground";
+                  const showFlexible =
+                    campaignMode &&
+                    campaignMissing.length > 0 &&
+                    message.role === "assistant" &&
+                    message.content.includes("To complete the campaign");
 
                   return (
-                    <div
-                      key={message.id}
-                      className={`flex ${alignment}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${bubbleClasses}`}
-                      >
-                        {message.content}
+                    <div key={message.id} className="space-y-2">
+                      <div className={`flex ${alignment}`}>
+                        <div
+                          className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${bubbleClasses}`}
+                        >
+                          {message.content}
+                        </div>
                       </div>
+                      {showFlexible && (
+                        <div className="flex justify-start pl-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleFlexibleCampaign}
+                            className="rounded-full px-4 py-2 text-sm font-medium shadow-sm"
+                            disabled={campaignProcessing}
+                          >
+                            Mark remaining as flexible
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
