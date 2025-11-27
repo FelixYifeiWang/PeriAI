@@ -534,6 +534,15 @@ export default function BusinessDashboard() {
   );
 }
 
+
+}
+
+
+
+
+
+
+
 function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
   const badgeClass = (status: Campaign["status"]) =>
     status === "finished"
@@ -571,3 +580,5 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
       </div>
     </div>
   );
+
+}
