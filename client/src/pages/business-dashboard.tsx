@@ -405,7 +405,7 @@ export default function BusinessDashboard() {
                           <Send className="h-4 w-4" />
                         </Button>
                       </div>
-                      {!campaignMode && (
+                      {!campaignMode && !campaignProcessing && !hasMessages && (
                         <div className="flex justify-center">
                           <Button
                             variant="outline"
@@ -490,7 +490,7 @@ export default function BusinessDashboard() {
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
-                  {!campaignMode && (
+                  {!campaignMode && !campaignProcessing && !hasMessages && (
                     <div className="flex justify-center gap-3">
                       <Button
                         variant="outline"
