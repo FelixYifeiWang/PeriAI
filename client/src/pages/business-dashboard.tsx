@@ -155,6 +155,10 @@ export default function BusinessDashboard() {
     }
   };
 
+  const handleStartCampaign = () => {
+    window.location.href = "/business/campaigns";
+  };
+
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="border-b border-muted-foreground/10 bg-white/80 backdrop-blur shadow-sm">
@@ -224,6 +228,11 @@ export default function BusinessDashboard() {
                           <Send className="h-4 w-4" />
                         </Button>
                       </div>
+                      <div className="flex justify-center">
+                        <Button variant="outline" size="sm" onClick={handleStartCampaign}>
+                          Start a campaign
+                        </Button>
+                      </div>
                     </form>
                   </div>
                 )}
@@ -277,6 +286,11 @@ export default function BusinessDashboard() {
                       size="icon"
                     >
                       <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex justify-center">
+                    <Button variant="outline" size="sm" onClick={handleStartCampaign}>
+                      Start a campaign
                     </Button>
                   </div>
                 </form>
