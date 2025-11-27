@@ -111,7 +111,7 @@ export default function BusinessDashboard() {
     },
     staleTime: 5 * 60 * 1000,
   });
-  const { data: campaigns = [] } = useQuery<Campaign[]>({
+  const { data: campaigns = [], refetch: refetchCampaigns } = useQuery<Campaign[]>({
     queryKey: ["/api/business/campaigns"],
     queryFn: async () => {
       const res = await fetch("/api/business/campaigns", { credentials: "include" });
@@ -190,6 +190,7 @@ export default function BusinessDashboard() {
 
           if (missing.length === 0) {
             await finalizeCampaign(updatedDraft);
+            await refetchCampaigns();
             return;
           }
 
@@ -264,6 +265,7 @@ export default function BusinessDashboard() {
     try {
       const saveRes = await apiRequest("POST", "/api/business/campaigns", submitDraft);
       const saved = await saveRes.json();
+      await refetchCampaigns();
       const summary = "Saved your campaign.";
 
       setMessages((prev) => [
@@ -566,8 +568,13 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
           campaigns.map((campaign) => (
             <details key={campaign.id} className="px-5 py-3 group">
               <summary className="flex items-center justify-between gap-3 cursor-pointer select-none">
-                <div className="text-sm font-medium text-foreground truncate">
-                  {formatTimestamp(campaign.createdAt as string | null)}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-slate-400 group-open:rotate-90 transition-transform">
+                    ▶
+                  </span>
+                  <div className="text-sm font-medium text-foreground truncate">
+                    {formatTimestamp(campaign.createdAt as string | null)}
+                  </div>
                 </div>
                 <span className="flex justify-end w-1/2 max-w-[140px]">
                   <span
@@ -577,7 +584,7 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                   </span>
                 </span>
               </summary>
-              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground pl-6">
                 <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
                 <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
                 <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
