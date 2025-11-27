@@ -20,6 +20,7 @@ function parseOptionalNumber(value: unknown): number | undefined {
 }
 
 async function normalizeCampaignInput(data: {
+  businessId: string;
   productDetails: string;
   campaignGoal: string;
   targetAudience: string;
@@ -29,17 +30,6 @@ async function normalizeCampaignInput(data: {
   deliverables: string;
   additionalRequirements?: string | null;
 }) {
-  const userJson = JSON.stringify({
-    productDetails: data.productDetails,
-    campaignGoal: data.campaignGoal,
-    targetAudience: data.targetAudience,
-    budgetMin: data.budgetMin ?? null,
-    budgetMax: data.budgetMax ?? null,
-    timeline: data.timeline,
-    deliverables: data.deliverables,
-    additionalRequirements: data.additionalRequirements ?? null,
-  });
-
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -52,7 +42,17 @@ async function normalizeCampaignInput(data: {
         },
         {
           role: 'user',
-          content: userJson,
+          content: JSON.stringify({
+            businessId: data.businessId,
+            productDetails: data.productDetails,
+            campaignGoal: data.campaignGoal,
+            targetAudience: data.targetAudience,
+            budgetMin: data.budgetMin ?? null,
+            budgetMax: data.budgetMax ?? null,
+            timeline: data.timeline,
+            deliverables: data.deliverables,
+            additionalRequirements: data.additionalRequirements ?? null,
+          }),
         },
       ],
       response_format: { type: 'json_object' },
@@ -61,6 +61,7 @@ async function normalizeCampaignInput(data: {
     const parsed = JSON.parse(completion.choices?.[0]?.message?.content ?? '{}');
 
     return {
+      businessId: data.businessId,
       productDetails: typeof parsed.productDetails === 'string' ? parsed.productDetails : data.productDetails,
       campaignGoal: typeof parsed.campaignGoal === 'string' ? parsed.campaignGoal : data.campaignGoal,
       targetAudience: typeof parsed.targetAudience === 'string' ? parsed.targetAudience : data.targetAudience,
