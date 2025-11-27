@@ -21,6 +21,28 @@ export default function BusinessDashboard() {
   const [messages, setMessages] = useState<Array<{ id: string; role: "user" | "assistant"; content: string }>>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [campaignMode, setCampaignMode] = useState(false);
+  const [campaignStep, setCampaignStep] = useState(0);
+  const [campaignDraft, setCampaignDraft] = useState({
+    productDetails: "",
+    campaignGoal: "",
+    targetAudience: "",
+    budgetMin: undefined as number | undefined,
+    budgetMax: undefined as number | undefined,
+    timeline: "",
+    deliverables: "",
+    additionalRequirements: "",
+  });
+
+  const campaignSteps: Array<{ key: keyof typeof campaignDraft; prompt: string }> = [
+    { key: "productDetails", prompt: "Product/offer details?" },
+    { key: "campaignGoal", prompt: "Campaign goal?" },
+    { key: "targetAudience", prompt: "Target audience (demographics, age, region)?" },
+    { key: "budgetMin", prompt: "Budget range? (e.g., 2000-5000)" },
+    { key: "timeline", prompt: "Timeline and key dates?" },
+    { key: "deliverables", prompt: "Deliverables you expect?" },
+    { key: "additionalRequirements", prompt: "Any additional requirements or constraints? (optional)" },
+  ];
 
   const copy = useMemo(
     () =>
@@ -141,6 +163,87 @@ export default function BusinessDashboard() {
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content }]);
     setInput("");
 
+    if (campaignMode) {
+      const updatedDraft = { ...campaignDraft };
+      const step = campaignSteps[campaignStep];
+
+      if (step.key === "budgetMin") {
+        const { min, max } = parseBudgetRange(content);
+        updatedDraft.budgetMin = min;
+        updatedDraft.budgetMax = max;
+      } else if (step.key === "additionalRequirements") {
+        updatedDraft.additionalRequirements = content.toLowerCase() === "none" ? "" : content;
+      } else if (step.key === "productDetails") {
+        updatedDraft.productDetails = content;
+      } else if (step.key === "campaignGoal") {
+        updatedDraft.campaignGoal = content;
+      } else if (step.key === "targetAudience") {
+        updatedDraft.targetAudience = content;
+      } else if (step.key === "timeline") {
+        updatedDraft.timeline = content;
+      } else if (step.key === "deliverables") {
+        updatedDraft.deliverables = content;
+      }
+
+      const isLastStep = campaignStep >= campaignSteps.length - 1;
+
+      if (!isLastStep) {
+        setCampaignDraft(updatedDraft);
+        setCampaignStep((prev) => prev + 1);
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: "assistant", content: campaignSteps[campaignStep + 1].prompt },
+        ]);
+        setTimeout(() => inputRef.current?.focus(), 0);
+        return;
+      }
+
+      // Finalize campaign
+      const submitDraft = {
+        productDetails: updatedDraft.productDetails,
+        campaignGoal: updatedDraft.campaignGoal,
+        targetAudience: updatedDraft.targetAudience,
+        budgetMin: updatedDraft.budgetMin,
+        budgetMax: updatedDraft.budgetMax,
+        timeline: updatedDraft.timeline,
+        deliverables: updatedDraft.deliverables,
+        additionalRequirements: updatedDraft.additionalRequirements || undefined,
+      };
+
+      apiRequest("POST", "/api/business/campaigns", submitDraft)
+        .then((res) => res.json())
+        .then((saved) => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: `Campaign saved. Goal: ${saved.campaignGoal || updatedDraft.campaignGoal}. Deliverables: ${saved.deliverables || updatedDraft.deliverables}.`,
+            },
+          ]);
+        })
+        .catch(() => {
+          toast({ variant: "destructive", title: "Failed to save campaign" });
+        })
+        .finally(() => {
+          setCampaignMode(false);
+          setCampaignStep(0);
+          setCampaignDraft({
+            productDetails: "",
+            campaignGoal: "",
+            targetAudience: "",
+            budgetMin: undefined,
+            budgetMax: undefined,
+            timeline: "",
+            deliverables: "",
+            additionalRequirements: "",
+          });
+          setTimeout(() => inputRef.current?.focus(), 0);
+        });
+
+      return;
+    }
+
     const nextHistory = messages
       .concat({ role: "user" as const, content })
       .slice(-6)
@@ -156,6 +259,14 @@ export default function BusinessDashboard() {
     }
   };
 
+  function parseBudgetRange(inputValue: string): { min?: number; max?: number } {
+    const numbers = (inputValue.match(/\d+/g) || []).map((n) => Number.parseInt(n, 10)).filter(Number.isFinite);
+    if (!numbers.length) return {};
+    if (numbers.length === 1) return { min: numbers[0] };
+    const [first, second] = numbers;
+    return { min: Math.min(first, second), max: Math.max(first, second) };
+  }
+
   const handleStartCampaign = () => {
     const campaignGuide = [
       "I can help you set up a campaign. Please share:",
@@ -168,9 +279,22 @@ export default function BusinessDashboard() {
       "- Additional requirements or constraints",
     ].join("\n");
 
+    setCampaignDraft({
+      productDetails: "",
+      campaignGoal: "",
+      targetAudience: "",
+      budgetMin: undefined,
+      budgetMax: undefined,
+      timeline: "",
+      deliverables: "",
+      additionalRequirements: "",
+    });
+    setCampaignMode(true);
+    setCampaignStep(0);
     setMessages((prev) => [
       ...prev,
       { id: crypto.randomUUID(), role: "assistant", content: campaignGuide },
+      { id: crypto.randomUUID(), role: "assistant", content: campaignSteps[0].prompt },
     ]);
 
     setTimeout(() => {
