@@ -533,16 +533,6 @@ export default function BusinessDashboard() {
     </div>
   );
 }
-
-
-}
-
-
-
-
-
-
-
 function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
   const badgeClass = (status: Campaign["status"]) =>
     status === "finished"
