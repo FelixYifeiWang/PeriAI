@@ -189,7 +189,7 @@ export default function BusinessDashboard() {
                 {
                   id: crypto.randomUUID(),
                   role: "assistant",
-                  content: `Campaign saved. Goal: ${saved.campaignGoal || updatedDraft.campaignGoal}. Deliverables: ${saved.deliverables || updatedDraft.deliverables}.`,
+              content: `All set—I saved your campaign. Goal: ${saved.campaignGoal || updatedDraft.campaignGoal}. Deliverables: ${saved.deliverables || updatedDraft.deliverables}.`,
                 },
               ]);
             } catch (saveError) {
@@ -220,7 +220,7 @@ export default function BusinessDashboard() {
             {
               id: crypto.randomUUID(),
               role: "assistant",
-              content: `Thanks. I still need: ${missingFriendly}. Share them in one message.`,
+              content: `Thanks for those details. To complete the campaign, could you share: ${missingFriendly}?`,
             },
           ]);
           setTimeout(() => inputRef.current?.focus(), 0);
@@ -248,7 +248,7 @@ export default function BusinessDashboard() {
 
   const handleStartCampaign = () => {
     const campaignGuide = [
-      "I can help you set up a campaign. Please share:",
+      "Happy to help you set up a campaign. Share whatever you already have, and I'll fill in the blanks:",
       "- Product/offer details",
       "- Campaign goal",
       "- Target audience (demographics, age, region)",
@@ -275,7 +275,7 @@ export default function BusinessDashboard() {
       {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "Drop all the details you have in one message. I'll fill in what I can and ask only for what's missing.",
+        content: "Drop all the details in one go—I'll organize them and only follow up on anything missing.",
       },
     ]);
 
