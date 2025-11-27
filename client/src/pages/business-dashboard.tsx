@@ -359,7 +359,7 @@ export default function BusinessDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-hidden">
       <header className="border-b border-muted-foreground/10 bg-white/80 backdrop-blur shadow-sm">
         <div className="flex w-full items-center justify-between px-6 py-5">
           <div>
