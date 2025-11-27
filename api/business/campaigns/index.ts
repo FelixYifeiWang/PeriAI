@@ -115,9 +115,16 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
         return res.status(400).json({ message: fromError(validation.error).toString() });
       }
 
-      const normalized = await normalizeCampaignInput(validation.data);
+      const normalized = await normalizeCampaignInput({
+        ...validation.data,
+        budgetMin: validation.data.budgetMin ?? undefined,
+        budgetMax: validation.data.budgetMax ?? undefined,
+        status: "pending",
+      });
 
-      const finalPayload = insertCampaignSchema.safeParse(normalized);
+      const { status: _status, ...payload } = normalized;
+
+      const finalPayload = insertCampaignSchema.safeParse(payload);
       if (!finalPayload.success) {
         return res.status(400).json({ message: fromError(finalPayload.error).toString() });
       }

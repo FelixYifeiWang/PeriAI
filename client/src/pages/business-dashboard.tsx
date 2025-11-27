@@ -539,6 +539,13 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
       : "bg-slate-100 text-slate-700 border border-slate-200";
 
+  const formatTimestamp = (value?: string | null) => {
+    if (!value) return "New campaign";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "New campaign";
+    return date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
   return (
     <div className="rounded-2xl border border-muted-foreground/15 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="px-5 py-4 border-b border-muted-foreground/10">
@@ -550,21 +557,28 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
           <div className="px-5 py-4 text-sm text-muted-foreground">No campaigns yet.</div>
         ) : (
           campaigns.map((campaign) => (
-            <div key={campaign.id} className="px-5 py-4 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {campaign.campaignGoal || "Untitled campaign"}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {campaign.productDetails || "Pending details"}
-                </p>
+            <details key={campaign.id} className="px-5 py-3 group">
+              <summary className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {formatTimestamp(campaign.createdAt as string | null)}
+                </div>
+                <span className="flex justify-end w-1/2 max-w-[140px]">
+                  <span
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
+                  >
+                    {campaign.status === "finished" ? "Finished" : "Pending"}
+                  </span>
+                </span>
+              </summary>
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
+                <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
+                <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
+                <div><span className="text-foreground font-medium">Budget:</span> {formatBudget(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
+                <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
+                <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
               </div>
-              <span
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
-              >
-                {campaign.status === "finished" ? "Finished" : "Pending"}
-              </span>
-            </div>
+            </details>
           ))
         )}
       </div>
