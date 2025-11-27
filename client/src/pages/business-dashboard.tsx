@@ -382,8 +382,8 @@ export default function BusinessDashboard() {
         </div>
       </header>
 
-      <main className="w-full px-0 pb-0">
-        <div className="grid lg:grid-cols-[3fr,2fr] min-h-[calc(100vh-96px)] w-full">
+      <main className="w-full px-0 pb-0 h-[calc(100vh-96px)] overflow-hidden">
+        <div className="grid lg:grid-cols-[3fr,2fr] h-full w-full">
           <section className="flex flex-col h-full border-r border-muted-foreground/10 bg-white/80 backdrop-blur">
             <header className="flex items-center gap-3 px-6 py-4 border-b border-muted-foreground/10">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
