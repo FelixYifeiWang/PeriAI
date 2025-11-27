@@ -255,16 +255,14 @@ export default function BusinessDashboard() {
       const saveRes = await apiRequest("POST", "/api/business/campaigns", submitDraft);
       const saved = await saveRes.json();
       const summary = [
-        "All set—I saved your campaign.",
-        "",
-        "Summary:",
-        `- Product: ${saved.productDetails || draft.productDetails || "Not provided"}`,
-        `- Goal: ${saved.campaignGoal || draft.campaignGoal || "Not provided"}`,
-        `- Audience: ${saved.targetAudience || draft.targetAudience || "Not provided"}`,
-        `- Budget: ${formatBudget(saved.budgetMin ?? draft.budgetMin, saved.budgetMax ?? draft.budgetMax)}`,
-        `- Timeline: ${saved.timeline || draft.timeline || "Not provided"}`,
-        `- Deliverables: ${saved.deliverables || draft.deliverables || "Not provided"}`,
-        `- Additional: ${saved.additionalRequirements || draft.additionalRequirements || "None"}`,
+        "Saved your campaign.",
+        `Product: ${saved.productDetails || draft.productDetails || "Not provided"}`,
+        `Goal: ${saved.campaignGoal || draft.campaignGoal || "Not provided"}`,
+        `Audience: ${saved.targetAudience || draft.targetAudience || "Not provided"}`,
+        `Budget: ${formatBudget(saved.budgetMin ?? draft.budgetMin, saved.budgetMax ?? draft.budgetMax)}`,
+        `Timeline: ${saved.timeline || draft.timeline || "Not provided"}`,
+        `Deliverables: ${saved.deliverables || draft.deliverables || "Not provided"}`,
+        `Additional: ${saved.additionalRequirements || draft.additionalRequirements || "None"}`,
       ].join("\n");
 
       setMessages((prev) => [
