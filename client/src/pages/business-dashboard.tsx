@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/providers/language-provider";
 import LanguageToggle from "@/components/language-toggle";
 import { Link } from "wouter";
-import { LogOut, Send, Sparkles } from "lucide-react";
+import { LogOut, Send, Sparkles, Plus, Mic, AudioLines } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { isBusinessProfileComplete } from "@/lib/businessProfile";
 import { Textarea } from "@/components/ui/textarea";
@@ -190,38 +190,39 @@ export default function BusinessDashboard() {
               <h2 className="text-lg font-semibold tracking-tight text-foreground">{copy.chat.title}</h2>
             </header>
             <div className="flex-1 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
-              <div className="flex-1 rounded-3xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/80 p-4 overflow-y-auto space-y-4 shadow-sm">
+              <div className="rounded-3xl border border-slate-200 bg-white p-4 flex-1 overflow-y-auto space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
                 {!hasMessages && (
-                  <div className="flex h-full items-center justify-center text-center">
+                  <div className="flex h-full items-center justify-center">
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
                         handleSend();
                       }}
-                      className="w-full max-w-xl space-y-3"
+                      className="w-full max-w-3xl space-y-5 text-center"
                     >
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        <div className="text-base font-semibold text-foreground">
-                          {copy.chat.intro(profile?.companyName)}
-                        </div>
-                      </div>
-                      <div className="relative rounded-2xl border border-slate-200 bg-white/80 shadow-sm px-3 pt-3 pb-10">
+                      <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                        {copy.chat.intro(profile?.companyName)}
+                      </h2>
+                      <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                        <Plus className="h-5 w-5 text-slate-400" />
                         <Textarea
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={handleKeyDown}
                           placeholder={copy.chat.placeholder}
-                          className="min-h-[72px] w-full resize-none border-none bg-transparent pr-12 text-sm leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className="flex-1 min-h-[24px] resize-none border-none bg-transparent text-base text-foreground leading-6 focus-visible:ring-0 focus-visible:ring-offset-0"
                           disabled={chatMutation.isPending}
+                          rows={1}
                           autoFocus
                         />
+                        <Mic className="h-5 w-5 text-slate-400" />
                         <Button
                           type="submit"
                           disabled={!input.trim() || chatMutation.isPending}
-                          className="absolute bottom-3 right-3 h-9 w-9 rounded-full p-0 shadow-sm"
+                          className="h-10 w-10 rounded-full bg-black p-0 text-white shadow-md"
                           size="icon"
                         >
-                          <Send className="h-4 w-4" />
+                          <AudioLines className="h-4 w-4" />
                         </Button>
                       </div>
                     </form>
@@ -231,7 +232,7 @@ export default function BusinessDashboard() {
                   const alignment = message.role === "assistant" ? "justify-start" : "justify-end";
                   const bubbleClasses =
                     message.role === "assistant"
-                      ? "bg-white text-foreground border border-slate-200 shadow-sm"
+                      ? "bg-white text-foreground border border-muted-foreground/20 shadow-sm"
                       : "bg-primary text-primary-foreground";
 
                   return (
@@ -240,7 +241,7 @@ export default function BusinessDashboard() {
                       className={`flex ${alignment}`}
                     >
                       <div
-                        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed whitespace-pre-wrap ${bubbleClasses}`}
+                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${bubbleClasses}`}
                       >
                         {message.content}
                       </div>
@@ -252,7 +253,6 @@ export default function BusinessDashboard() {
                 )}
                 <div ref={scrollRef} />
               </div>
-
               {hasMessages && (
                 <form
                   onSubmit={(e) => {
@@ -261,22 +261,25 @@ export default function BusinessDashboard() {
                   }}
                   className="space-y-3"
                 >
-                  <div className="relative rounded-2xl border border-slate-200 bg-white/80 shadow-sm px-3 pt-3 pb-10">
+                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                    <Plus className="h-5 w-5 text-slate-400" />
                     <Textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder={copy.chat.placeholder}
-                      className="min-h-[72px] w-full resize-none border-none bg-transparent pr-12 text-sm leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="flex-1 min-h-[24px] resize-none border-none bg-transparent text-base text-foreground leading-6 focus-visible:ring-0 focus-visible:ring-offset-0"
                       disabled={chatMutation.isPending}
+                      rows={1}
                     />
+                    <Mic className="h-5 w-5 text-slate-400" />
                     <Button
                       type="submit"
                       disabled={!input.trim() || chatMutation.isPending}
-                      className="absolute bottom-3 right-3 h-9 w-9 rounded-full p-0 shadow-sm"
+                      className="h-10 w-10 rounded-full bg-black p-0 text-white shadow-md"
                       size="icon"
                     >
-                      <Send className="h-4 w-4" />
+                      <AudioLines className="h-4 w-4" />
                     </Button>
                   </div>
                 </form>
