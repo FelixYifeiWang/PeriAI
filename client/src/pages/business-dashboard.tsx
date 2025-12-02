@@ -392,7 +392,11 @@ export default function BusinessDashboard() {
               <h2 className="text-lg font-semibold tracking-tight text-foreground">{copy.chat.title}</h2>
             </header>
             <div className="flex-1 min-h-0 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
-              <div className="rounded-3xl border border-slate-200 bg-white p-4 flex-1 min-h-0 overflow-y-auto space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+              <div
+                className={`rounded-3xl border border-slate-200 bg-white p-4 flex-1 min-h-0 space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] ${
+                  hasMessages ? "overflow-y-auto" : "overflow-hidden"
+                }`}
+              >
                 {!hasMessages && (
                   <div className="flex h-full items-center justify-center">
                     {showComposer ? (
