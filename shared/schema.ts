@@ -84,7 +84,9 @@ export const campaigns = pgTable("campaigns", {
   timeline: text("timeline").notNull(),
   deliverables: text("deliverables").notNull(),
   additionalRequirements: text("additional_requirements"),
-  status: varchar("status", { enum: ["pending", "finished"] }).notNull().default("pending"),
+  status: varchar("status", { enum: ["pending", "searching", "waiting_approval", "finished"] }).notNull().default("pending"),
+  searchCriteria: text("search_criteria"),
+  matchedInfluencers: jsonb("matched_influencers"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -92,6 +94,8 @@ export const campaigns = pgTable("campaigns", {
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
   status: true,
+  searchCriteria: true,
+  matchedInfluencers: true,
   createdAt: true,
   updatedAt: true,
 });

@@ -121,6 +121,7 @@ export default function BusinessDashboard() {
     },
     staleTime: 60_000,
   });
+  const [processingCampaignId, setProcessingCampaignId] = useState<string | null>(null);
 
   const buildChatContext = () => {
     const profileContext = profile
@@ -412,6 +413,18 @@ export default function BusinessDashboard() {
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
+  useEffect(() => {
+    if (processingCampaignId) return;
+    const pending = campaigns.find((c) => c.status === "pending");
+    if (!pending) return;
+
+    setProcessingCampaignId(pending.id);
+    fetch("/api/business/campaigns/process", { method: "POST", credentials: "include" })
+      .then(() => refetchCampaigns())
+      .catch((err) => console.error("Process campaign error:", err))
+      .finally(() => setProcessingCampaignId(null));
+  }, [campaigns, processingCampaignId, refetchCampaigns]);
+
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="border-b border-muted-foreground/10 bg-white/80 backdrop-blur shadow-sm">
@@ -626,7 +639,11 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
   const badgeClass = (status: Campaign["status"]) =>
     status === "finished"
       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-      : "bg-slate-100 text-slate-700 border border-slate-200";
+      : status === "searching"
+        ? "bg-amber-100 text-amber-700 border border-amber-200"
+        : status === "waiting_approval"
+          ? "bg-blue-100 text-blue-700 border border-blue-200"
+          : "bg-slate-100 text-slate-700 border border-slate-200";
 
   const formatTimestamp = (value?: string | null) => {
     if (!value) return "New campaign";
@@ -667,17 +684,37 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                   <span
                     className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
                   >
-                    {campaign.status === "finished" ? "Finished" : "Pending"}
+                    {campaign.status === "finished"
+                      ? "Finished"
+                      : campaign.status === "searching"
+                        ? "Searching"
+                        : campaign.status === "waiting_approval"
+                          ? "Waiting for approval"
+                          : "Pending"}
                   </span>
                 </span>
               </summary>
-              <div className="mt-3 space-y-1 text-sm text-muted-foreground pl-6">
-                <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
-                <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
-                <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
-                <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
-                <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
-                <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
+              <div className="mt-3 space-y-2 text-sm text-muted-foreground pl-6">
+                <div>
+                  <span className="text-foreground font-medium">Search criteria:</span>
+                  <div className="mt-1 whitespace-pre-wrap">{campaign.searchCriteria || "Not generated yet"}</div>
+                </div>
+                <div>
+                  <span className="text-foreground font-medium">Found influencers:</span>
+                  {Array.isArray(campaign.matchedInfluencers) && campaign.matchedInfluencers.length > 0 ? (
+                    <ul className="mt-1 space-y-1">
+                      {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string }>).map((inf, idx) => (
+                        <li key={idx} className="flex flex-col">
+                          <span className="text-foreground">{inf.name || inf.username || "Unknown"}</span>
+                          <span className="text-xs text-muted-foreground">{inf.email || ""}</span>
+                          {inf.preferences && <span className="text-xs text-muted-foreground">Prefs: {inf.preferences}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="mt-1">Pending results</div>
+                  )}
+                </div>
               </div>
             </details>
           ))

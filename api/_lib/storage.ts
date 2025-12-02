@@ -36,7 +36,16 @@ export interface IStorage {
   getCampaignsByBusiness(businessId: string): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
-  updateCampaignStatus(id: string, status: "pending" | "finished"): Promise<Campaign>;
+  updateCampaignStatus(id: string, status: "pending" | "searching" | "waiting_approval" | "finished"): Promise<Campaign>;
+  getOldestPendingCampaign(businessId: string): Promise<Campaign | undefined>;
+  saveCampaignSearchResult(
+    id: string,
+    data: {
+      status: "searching" | "waiting_approval";
+      searchCriteria?: string | null;
+      matchedInfluencers?: unknown;
+    },
+  ): Promise<Campaign>;
   
   // Influencer preferences
   getInfluencerPreferences(userId: string): Promise<InfluencerPreferences | undefined>;
@@ -167,10 +176,42 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateCampaignStatus(id: string, status: "pending" | "finished"): Promise<Campaign> {
+  async updateCampaignStatus(id: string, status: "pending" | "searching" | "waiting_approval" | "finished"): Promise<Campaign> {
     const [result] = await db
       .update(campaigns)
       .set({ status, updatedAt: new Date() })
+      .where(eq(campaigns.id, id))
+      .returning();
+    return result;
+  }
+
+  async getOldestPendingCampaign(businessId: string): Promise<Campaign | undefined> {
+    const [result] = await db
+      .select()
+      .from(campaigns)
+      .where(eq(campaigns.businessId, businessId))
+      .orderBy(campaigns.createdAt)
+      .limit(1);
+    if (result && result.status === "pending") return result;
+    return undefined;
+  }
+
+  async saveCampaignSearchResult(
+    id: string,
+    data: {
+      status: "searching" | "waiting_approval";
+      searchCriteria?: string | null;
+      matchedInfluencers?: unknown;
+    },
+  ): Promise<Campaign> {
+    const [result] = await db
+      .update(campaigns)
+      .set({
+        status: data.status,
+        searchCriteria: data.searchCriteria ?? null,
+        matchedInfluencers: data.matchedInfluencers ?? null,
+        updatedAt: new Date(),
+      })
       .where(eq(campaigns.id, id))
       .returning();
     return result;
