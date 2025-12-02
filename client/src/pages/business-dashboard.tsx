@@ -133,9 +133,24 @@ export default function BusinessDashboard() {
         ]
           .filter(Boolean)
           .join(" | ")
-      : "";
+      : "Brand profile not set.";
 
-    const recentCampaigns = campaigns.slice(0, 3);
+    const totalCampaigns = campaigns.length;
+    const sortedCampaigns = [...campaigns].sort((a, b) => {
+      const da = a.createdAt ? new Date(a.createdAt as string).getTime() : 0;
+      const db = b.createdAt ? new Date(b.createdAt as string).getTime() : 0;
+      return db - da;
+    });
+    const latestCampaign = sortedCampaigns[0];
+    const latestSummary = latestCampaign
+      ? [
+          `Latest campaign started ${latestCampaign.createdAt ? new Date(latestCampaign.createdAt as string).toLocaleString() : "recently"}`,
+          `Goal: ${latestCampaign.campaignGoal || "N/A"}`,
+          `Status: ${latestCampaign.status}`,
+        ].join(" | ")
+      : "No campaigns yet.";
+
+    const recentCampaigns = sortedCampaigns.slice(0, 3);
     const campaignsContext =
       recentCampaigns.length > 0
         ? recentCampaigns
@@ -147,8 +162,10 @@ export default function BusinessDashboard() {
         : "";
 
     const parts = [
-      "Context for this brand:",
-      profileContext,
+      "You are the brand AI for this business. Answer basic questions about the brand profile and campaigns, and keep responses concise and conversational.",
+      `Brand overview: ${profileContext}`,
+      `Total campaigns: ${totalCampaigns}`,
+      `Latest campaign: ${latestSummary}`,
       campaignsContext ? `Recent campaigns:\n${campaignsContext}` : "",
     ].filter(Boolean);
 
