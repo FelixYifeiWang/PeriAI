@@ -122,11 +122,48 @@ export default function BusinessDashboard() {
     staleTime: 60_000,
   });
 
+  const buildChatContext = () => {
+    const profileContext = profile
+      ? [
+          profile.companyName && `Brand: ${profile.companyName}`,
+          profile.industry && `Industry: ${profile.industry}`,
+          profile.description && `Story: ${profile.description}`,
+          profile.companySize && `Team size: ${profile.companySize}`,
+          profile.website && `Website: ${profile.website}`,
+        ]
+          .filter(Boolean)
+          .join(" | ")
+      : "";
+
+    const recentCampaigns = campaigns.slice(0, 3);
+    const campaignsContext =
+      recentCampaigns.length > 0
+        ? recentCampaigns
+            .map((c) => {
+              const started = c.createdAt ? new Date(c.createdAt as string).toLocaleDateString() : "recent";
+              return `- ${started}: ${c.campaignGoal || "Untitled"} (status: ${c.status})`;
+            })
+            .join("\n")
+        : "";
+
+    const parts = [
+      "Context for this brand:",
+      profileContext,
+      campaignsContext ? `Recent campaigns:\n${campaignsContext}` : "",
+    ].filter(Boolean);
+
+    return parts.join("\n");
+  };
+
   const chatMutation = useMutation({
     mutationFn: async (payload: { content: string; history: Array<{ role: "user" | "assistant"; content: string }> }) => {
+      const context = buildChatContext();
+      const contextualHistory = context
+        ? [{ role: "system", content: context }, ...payload.history]
+        : payload.history;
       const response = await apiRequest("POST", "/api/business/ai-chat", {
         language,
-        messages: payload.history.concat({ role: "user", content: payload.content }),
+        messages: contextualHistory.concat({ role: "user", content: payload.content }),
       });
       return response.json() as Promise<{ message: { role: "assistant"; content: string } }>;
     },
