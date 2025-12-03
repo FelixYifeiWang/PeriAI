@@ -104,7 +104,7 @@ const translations = {
       },
     },
     statusBadge: {
-      approved: "Approved",
+      approved: "Deal!",
       rejected: "Rejected",
       pending: "Pending",
       needsInfo: "Needs Info",
@@ -217,7 +217,7 @@ const translations = {
       },
     },
     statusBadge: {
-      approved: "已通过",
+      approved: "成交！",
       rejected: "已拒绝",
       pending: "待处理",
       needsInfo: "需更多信息",
