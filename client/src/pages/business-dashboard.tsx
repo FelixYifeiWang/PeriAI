@@ -691,32 +691,50 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                 </span>
               </summary>
               <div className="mt-3 space-y-2 text-sm text-muted-foreground pl-6">
-                <div>
-                  <span className="text-foreground font-medium">Search criteria:</span>
-                  <div className="mt-1 whitespace-pre-wrap">{campaign.searchCriteria || "Not generated yet"}</div>
-                </div>
-                <div>
-                  <span className="text-foreground font-medium">Found influencers:</span>
+                <details>
+                  <summary className="cursor-pointer select-none text-foreground font-medium">Campaign info</summary>
+                  <div className="mt-2 space-y-1">
+                    <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
+                    <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
+                  </div>
+                </details>
+                <details>
+                  <summary className="cursor-pointer select-none text-foreground font-medium">Search criteria</summary>
+                  <div className="mt-2 whitespace-pre-wrap">{campaign.searchCriteria || "Not generated yet"}</div>
+                </details>
+                <details open>
+                  <summary className="cursor-pointer select-none text-foreground font-medium">Found influencers</summary>
                   {Array.isArray(campaign.matchedInfluencers) && campaign.matchedInfluencers.length > 0 ? (
-                    <ul className="mt-1 space-y-1">
+                    <ul className="mt-2 space-y-2">
                       {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string }>).map((inf, idx) => (
-                        <li key={idx} className="flex flex-col">
-                          <span className="text-foreground flex items-center gap-2">
-                            {inf.name || inf.username || "Unknown"}
-                            {typeof inf.score === "number" && (
-                              <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
-                            )}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{inf.email || ""}</span>
-                          {inf.preferences && <span className="text-xs text-muted-foreground">Prefs: {inf.preferences}</span>}
-                          {inf.reason && <span className="text-xs text-muted-foreground">Reason: {inf.reason}</span>}
+                        <li key={idx} className="rounded-lg border border-muted-foreground/10 bg-white px-3 py-2">
+                          <details>
+                            <summary className="flex items-center justify-between gap-2 cursor-pointer select-none text-foreground">
+                              <span className="flex items-center gap-2">
+                                {inf.name || inf.username || "Unknown"}
+                                {typeof inf.score === "number" && (
+                                  <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
+                                )}
+                              </span>
+                              <span className="text-xs text-muted-foreground">Tap to view</span>
+                            </summary>
+                            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                              {inf.email && <div>Email: {inf.email}</div>}
+                              {inf.preferences && <div>Prefs: {inf.preferences}</div>}
+                              {inf.reason && <div>Reason: {inf.reason}</div>}
+                            </div>
+                          </details>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <div className="mt-1">Pending results</div>
+                    <div className="mt-2">Pending results</div>
                   )}
-                </div>
+                </details>
               </div>
             </details>
           ))
