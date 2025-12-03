@@ -641,6 +641,8 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
       : status === "waiting_approval"
         ? "bg-blue-100 text-blue-700 border border-blue-200"
+        : status === "denied"
+          ? "bg-rose-100 text-rose-700 border border-rose-200"
         : "bg-amber-100 text-amber-700 border border-amber-200";
 
   const formatTimestamp = (value?: string | null) => {
@@ -667,118 +669,166 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
         {campaigns.length === 0 ? (
           <div className="px-5 py-4 text-sm text-muted-foreground">No campaigns yet.</div>
         ) : (
-          campaigns.map((campaign) => (
-            <details key={campaign.id} className="px-5 py-3 group">
-              <summary className="flex items-center justify-between gap-3 cursor-pointer select-none">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-slate-400 group-open:rotate-90 transition-transform">
-                    ▶
-                  </span>
-                  <div className="text-sm font-medium text-foreground truncate">
-                    {formatTimestamp(campaign.createdAt as string | null)}
-                  </div>
-                </div>
-                <span className="flex justify-end w-1/2 max-w-[170px]">
-                  <span
-                    className={`inline-flex items-center rounded-full px-4 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
-                  >
-                    {campaign.status === "finished"
-                      ? "Finished"
-                      : campaign.status === "waiting_approval"
-                        ? "Waiting for approval"
-                        : "Processing"}
-                  </span>
-                </span>
-              </summary>
-              <div className="mt-3 space-y-2 text-sm text-muted-foreground pl-6">
-                <details>
-                  <summary className="cursor-pointer select-none text-foreground font-medium">Campaign information</summary>
-                  <div className="mt-2 space-y-1">
-                    <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
-                    <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
-                    <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
-                    <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
-                    <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
-                    <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
-                    <div><span className="text-foreground font-medium">Additional requirements:</span> {campaign.additionalRequirements || "None"}</div>
-                  </div>
-                </details>
-                <details>
-                  <summary className="cursor-pointer select-none text-foreground font-medium">Search criteria</summary>
-                  <div className="mt-2 space-y-1">
-                    {(() => {
-                      if (!campaign.searchCriteria) {
-                        return <div className="text-muted-foreground">Not generated yet</div>;
-                      }
-                      let parsed: any;
-                      try {
-                        parsed = JSON.parse(campaign.searchCriteria);
-                      } catch {
-                        parsed = null;
-                      }
-                      if (parsed && typeof parsed === "object") {
-                        const rows = [
-                          parsed.keywords?.length ? `Keywords: ${(parsed.keywords as string[]).join(", ")}` : null,
-                          parsed.languages?.length ? `Languages: ${(parsed.languages as string[]).join(", ")}` : null,
-                          parsed.regions?.length ? `Regions: ${(parsed.regions as string[]).join(", ")}` : null,
-                          parsed.contentTypes?.length ? `Content types: ${(parsed.contentTypes as string[]).join(", ")}` : null,
-                          (parsed.minBudget || parsed.maxBudget) ? `Budget: ${parsed.minBudget ?? "?"} - ${parsed.maxBudget ?? "?"}` : null,
-                        ].filter(Boolean);
-                        return rows.length ? rows.map((line, idx) => <div key={idx} className="text-muted-foreground">• {line}</div>) : <div className="text-muted-foreground">Not generated yet</div>;
-                      }
-                      return campaign.searchCriteria
-                        .split(/\r?\n/)
-                        .filter((line) => line.trim().length > 0)
-                        .map((line, idx) => (
-                          <div key={idx} className="text-muted-foreground">
-                            • {line.trim()}
-                          </div>
-                        ));
-                    })()}
-                  </div>
-                </details>
-                <details open>
-                  <summary className="cursor-pointer select-none text-foreground font-medium">Found influencers</summary>
-                  {Array.isArray(campaign.matchedInfluencers) && campaign.matchedInfluencers.length > 0 ? (
-                    <ul className="mt-2 space-y-2">
-                      {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string }>).map((inf, idx) => (
-                        <li key={idx} className="rounded-lg border border-muted-foreground/10 bg-white px-3 py-2">
-                          <details>
-                            <summary className="flex items-center justify-between gap-2 cursor-pointer select-none text-foreground">
-                              <span className="flex items-center gap-2">
-                                {inf.name || inf.username || "Unknown"}
-                                {typeof inf.score === "number" && (
-                                  <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
-                                )}
-                              </span>
-                              <span className="text-xs text-muted-foreground">Tap to view</span>
-                            </summary>
-                            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                              {inf.email && <div>Email: {inf.email}</div>}
-                              {inf.preferences && <div>Prefs: {inf.preferences}</div>}
-                              {inf.reason && <div>Reason: {inf.reason}</div>}
-                            </div>
-                          </details>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="mt-2">Pending results</div>
-                  )}
-                  {campaign.status === "waiting_approval" && (
-                    <div className="mt-3 flex gap-2">
-                      <Button variant="default" size="sm" className="rounded-full px-4">
-                        Approve
-                      </Button>
-                      <Button variant="outline" size="sm" className="rounded-full px-4">
-                        Reject
-                      </Button>
+          <>
+            {campaigns
+              .filter((c) => c.status !== "denied")
+              .map((campaign) => (
+                <details key={campaign.id} className="px-5 py-3 group">
+                  <summary className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-slate-400 group-open:rotate-90 transition-transform">
+                        ▶
+                      </span>
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {formatTimestamp(campaign.createdAt as string | null)}
+                      </div>
                     </div>
-                  )}
+                    <span className="flex justify-end w-1/2 max-w-[170px]">
+                      <span
+                        className={`inline-flex items-center rounded-full px-4 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
+                      >
+                        {campaign.status === "finished"
+                          ? "Finished"
+                          : campaign.status === "waiting_approval"
+                            ? "Waiting for approval"
+                            : campaign.status === "denied"
+                              ? "Rejected"
+                              : "Processing"}
+                      </span>
+                    </span>
+                  </summary>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground pl-6">
+                    <details>
+                      <summary className="cursor-pointer select-none text-foreground font-medium">Campaign information</summary>
+                      <div className="mt-2 space-y-1">
+                        <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
+                        <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
+                        <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
+                        <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
+                        <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
+                        <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
+                        <div><span className="text-foreground font-medium">Additional requirements:</span> {campaign.additionalRequirements || "None"}</div>
+                      </div>
+                    </details>
+                    <details>
+                      <summary className="cursor-pointer select-none text-foreground font-medium">Search criteria</summary>
+                      <div className="mt-2 space-y-1">
+                        {(() => {
+                          if (!campaign.searchCriteria) {
+                            return <div className="text-muted-foreground">Not generated yet</div>;
+                          }
+                          let parsed: any;
+                          try {
+                            parsed = JSON.parse(campaign.searchCriteria);
+                          } catch {
+                            parsed = null;
+                          }
+                          if (parsed && typeof parsed === "object") {
+                            const rows = [
+                              parsed.keywords?.length ? `Keywords: ${(parsed.keywords as string[]).join(", ")}` : null,
+                              parsed.languages?.length ? `Languages: ${(parsed.languages as string[]).join(", ")}` : null,
+                              parsed.regions?.length ? `Regions: ${(parsed.regions as string[]).join(", ")}` : null,
+                              parsed.contentTypes?.length ? `Content types: ${(parsed.contentTypes as string[]).join(", ")}` : null,
+                              (parsed.minBudget || parsed.maxBudget) ? `Budget: ${parsed.minBudget ?? "?"} - ${parsed.maxBudget ?? "?"}` : null,
+                            ].filter(Boolean);
+                            return rows.length ? rows.map((line, idx) => <div key={idx} className="text-muted-foreground">• {line}</div>) : <div className="text-muted-foreground">Not generated yet</div>;
+                          }
+                          return campaign.searchCriteria
+                            .split(/\r?\n/)
+                            .filter((line) => line.trim().length > 0)
+                            .map((line, idx) => (
+                              <div key={idx} className="text-muted-foreground">
+                                • {line.trim()}
+                              </div>
+                            ));
+                        })()}
+                      </div>
+                    </details>
+                    <details open>
+                      <summary className="cursor-pointer select-none text-foreground font-medium">Found influencers</summary>
+                      {Array.isArray(campaign.matchedInfluencers) && campaign.matchedInfluencers.length > 0 ? (
+                        <ul className="mt-2 space-y-2">
+                          {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string }>).map((inf, idx) => (
+                            <li key={idx} className="rounded-lg border border-muted-foreground/10 bg-white px-3 py-2">
+                              <details>
+                                <summary className="flex items-center justify-between gap-2 cursor-pointer select-none text-foreground">
+                                  <span className="flex items-center gap-2">
+                                    {inf.name || inf.username || "Unknown"}
+                                    {typeof inf.score === "number" && (
+                                      <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
+                                    )}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">Tap to view</span>
+                                </summary>
+                                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                  {inf.email && <div>Email: {inf.email}</div>}
+                                  {inf.preferences && <div>Prefs: {inf.preferences}</div>}
+                                  {inf.reason && <div>Reason: {inf.reason}</div>}
+                                </div>
+                              </details>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="mt-2">Pending results</div>
+                      )}
+                      {campaign.status === "waiting_approval" && (
+                        <div className="mt-3 flex gap-2">
+                          <Button variant="default" size="sm" className="rounded-full px-4">
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full px-4"
+                            onClick={() => {
+                              fetch(`/api/business/campaigns/${campaign.id}/status`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({ status: "denied" }),
+                              }).then(() => refetchCampaigns?.()).catch(() => {});
+                            }}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </details>
+                  </div>
                 </details>
-              </div>
-            </details>
-          ))
+              ))}
+            {campaigns.filter((c) => c.status === "denied").length > 0 && (
+              <details className="px-5 py-3 group">
+                <summary className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-slate-400 group-open:rotate-90 transition-transform">▶</span>
+                    <div className="text-sm font-semibold text-foreground">History</div>
+                  </div>
+                </summary>
+                <div className="mt-3 space-y-3 text-sm text-muted-foreground pl-6">
+                  {campaigns
+                    .filter((c) => c.status === "denied")
+                    .map((campaign) => (
+                      <details key={campaign.id}>
+                        <summary className="flex items-center justify-between gap-2 cursor-pointer select-none">
+                          <span>{formatTimestamp(campaign.createdAt as string | null)}</span>
+                          <span className="inline-flex items-center rounded-full px-4 py-1 text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200">
+                            Rejected
+                          </span>
+                        </summary>
+                        <div className="mt-2 space-y-1">
+                          <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
+                          <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
+                          <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
+                          <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
+                        </div>
+                      </details>
+                    ))}
+                </div>
+              </details>
+            )}
+          </>
         )}
       </div>
     </div>
