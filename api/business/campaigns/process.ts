@@ -12,6 +12,7 @@ function buildCriteriaPrompt(campaign: Campaign) {
   return [
     "You are generating concise search criteria to find influencers for a campaign.",
     "Return a short, readable list (3-6 bullet lines) with keywords/traits, nothing else.",
+    "Keywords must be generic categories or attributes, never brand names.",
     "Prioritize: audience fit, content type, language/region, budget tier, and deliverables.",
     "",
     `Campaign goal: ${campaign.campaignGoal || "N/A"}`,
@@ -47,7 +48,7 @@ async function extractFilters(criteriaText: string | null, campaign: Campaign) {
     "Convert the campaign details and criteria into a JSON filter for querying a DB of influencers.",
     "JSON shape:",
     "{ keywords: string[]; languages: string[]; regions: string[]; minBudget?: number; maxBudget?: number; contentTypes?: string[] }",
-    "Keep arrays short (<=5). Omit empty fields.",
+    "Keep arrays short (<=5). Omit empty fields. Keywords must be generic (categories/attributes), never brand names.",
     "",
     "Campaign info:",
     `Goal: ${campaign.campaignGoal}`,
@@ -96,8 +97,6 @@ async function findInfluencers(filters: Filter | null) {
       // approximate language preference match
       conditions.push(eq(users.languagePreference, filters.languages[0].toLowerCase().startsWith("zh") ? "zh" : "en"));
     }
-    // keyword match on preferences/content
-    const keyword = filters?.keywords?.[0];
     const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
 
     const result = await db
@@ -118,10 +117,8 @@ async function findInfluencers(filters: Filter | null) {
 
     const filtered = result.filter((r) => {
       if (!filters) return true;
-      const prefs = (r.preferences || "").toLowerCase();
       const baseline = r.baseline ?? 0;
       if (filters.maxBudget && baseline > filters.maxBudget) return false;
-      if (keyword && prefs && !prefs.includes(keyword.toLowerCase())) return false;
       return true;
     });
 

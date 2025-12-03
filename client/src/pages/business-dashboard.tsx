@@ -765,6 +765,16 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                   ) : (
                     <div className="mt-2">Pending results</div>
                   )}
+                  {campaign.status === "waiting_approval" && (
+                    <div className="mt-3 flex gap-2">
+                      <Button variant="default" size="sm" className="rounded-full px-4">
+                        Approve
+                      </Button>
+                      <Button variant="outline" size="sm" className="rounded-full px-4">
+                        Reject
+                      </Button>
+                    </div>
+                  )}
                 </details>
               </div>
             </details>
