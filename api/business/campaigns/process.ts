@@ -60,10 +60,10 @@ async function findInfluencers() {
 
     return result.map((r) => ({
       id: r.id,
-      username: r.username,
-      email: r.email,
-      name: [r.firstName, r.lastName].filter(Boolean).join(' ') || r.username,
-      preferences: r.preferences,
+      username: r.username ?? undefined,
+      email: r.email ?? undefined,
+      name: [r.firstName, r.lastName].filter(Boolean).join(' ') || r.username || undefined,
+      preferences: r.preferences ?? undefined,
     }));
   } catch (error) {
     console.error('Error fetching influencers:', error);
@@ -125,7 +125,7 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
-    const candidate = await storage.getOldestPendingCampaign(user.id);
+    const candidate = await storage.getOldestProcessingCampaign(user.id);
     if (!candidate) {
       return res.status(404).json({ message: 'No campaigns to process' });
     }

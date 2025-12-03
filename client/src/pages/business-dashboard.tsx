@@ -415,7 +415,7 @@ export default function BusinessDashboard() {
 
   useEffect(() => {
     if (processingCampaignId) return;
-    const candidate = campaigns.find((c) => c.status === "processing" || c.status === "pending");
+    const candidate = campaigns.find((c) => c.status === "processing");
     if (!candidate) return;
 
     setProcessingCampaignId(candidate.id);

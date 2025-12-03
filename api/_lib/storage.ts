@@ -36,8 +36,8 @@ export interface IStorage {
   getCampaignsByBusiness(businessId: string): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
-  updateCampaignStatus(id: string, status: "pending" | "processing" | "waiting_approval" | "finished"): Promise<Campaign>;
-  getOldestPendingCampaign(businessId: string): Promise<Campaign | undefined>;
+  updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "finished"): Promise<Campaign>;
+  getOldestProcessingCampaign(businessId: string): Promise<Campaign | undefined>;
   saveCampaignSearchResult(
     id: string,
     data: {
@@ -176,7 +176,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateCampaignStatus(id: string, status: "pending" | "processing" | "waiting_approval" | "finished"): Promise<Campaign> {
+  async updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "finished"): Promise<Campaign> {
     const [result] = await db
       .update(campaigns)
       .set({ status, updatedAt: new Date() })
@@ -185,14 +185,14 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getOldestPendingCampaign(businessId: string): Promise<Campaign | undefined> {
+  async getOldestProcessingCampaign(businessId: string): Promise<Campaign | undefined> {
     const [result] = await db
       .select()
       .from(campaigns)
       .where(
         and(
           eq(campaigns.businessId, businessId),
-          or(eq(campaigns.status, "processing"), eq(campaigns.status, "pending")),
+          eq(campaigns.status, "processing"),
         ),
       )
       .orderBy(campaigns.createdAt)
