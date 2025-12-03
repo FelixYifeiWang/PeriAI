@@ -315,7 +315,7 @@ export default function BusinessDashboard() {
     const submitDraft = {
       ...draft,
       additionalRequirements: draft.additionalRequirements || undefined,
-      status: "pending" as const,
+      status: "processing" as const,
     };
 
     try {
@@ -415,10 +415,10 @@ export default function BusinessDashboard() {
 
   useEffect(() => {
     if (processingCampaignId) return;
-    const pending = campaigns.find((c) => c.status === "pending");
-    if (!pending) return;
+    const processingCandidate = campaigns.find((c) => c.status === "processing");
+    if (!processingCandidate) return;
 
-    setProcessingCampaignId(pending.id);
+    setProcessingCampaignId(processingCandidate.id);
     fetch("/api/business/campaigns/process", { method: "POST", credentials: "include" })
       .then(() => refetchCampaigns())
       .catch((err) => console.error("Process campaign error:", err))
@@ -639,11 +639,9 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
   const badgeClass = (status: Campaign["status"]) =>
     status === "finished"
       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-      : status === "searching"
-        ? "bg-amber-100 text-amber-700 border border-amber-200"
-        : status === "waiting_approval"
-          ? "bg-blue-100 text-blue-700 border border-blue-200"
-          : "bg-slate-100 text-slate-700 border border-slate-200";
+      : status === "waiting_approval"
+        ? "bg-blue-100 text-blue-700 border border-blue-200"
+        : "bg-amber-100 text-amber-700 border border-amber-200";
 
   const formatTimestamp = (value?: string | null) => {
     if (!value) return "New campaign";
@@ -682,15 +680,13 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                 </div>
                 <span className="flex justify-end w-1/2 max-w-[140px]">
                   <span
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
+                    className={`inline-flex items-center rounded-full px-4 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
                   >
                     {campaign.status === "finished"
                       ? "Finished"
-                      : campaign.status === "searching"
-                        ? "Searching"
-                        : campaign.status === "waiting_approval"
-                          ? "Waiting for approval"
-                          : "Pending"}
+                      : campaign.status === "waiting_approval"
+                        ? "Waiting for approval"
+                        : "Processing"}
                   </span>
                 </span>
               </summary>

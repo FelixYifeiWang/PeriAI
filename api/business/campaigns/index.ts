@@ -29,7 +29,7 @@ async function normalizeCampaignInput(data: {
   timeline: string;
   deliverables: string;
   additionalRequirements?: string | null;
-  status?: "pending" | "finished";
+  status?: "processing" | "waiting_approval" | "finished";
 }) {
   try {
     const completion = await openai.chat.completions.create({
@@ -39,7 +39,7 @@ async function normalizeCampaignInput(data: {
         {
           role: 'system',
           content:
-            'You clean campaign input for database storage. Return JSON only. Keep text concise and specific. Normalize budget numbers (integers, no currency symbols). Preserve meaning; do not invent data. Keys: productDetails, campaignGoal, targetAudience, budgetMin, budgetMax, timeline, deliverables, additionalRequirements, status (pending|finished). Default status to pending if unsure.',
+            'You clean campaign input for database storage. Return JSON only. Keep text concise and specific. Normalize budget numbers (integers, no currency symbols). Preserve meaning; do not invent data. Keys: productDetails, campaignGoal, targetAudience, budgetMin, budgetMax, timeline, deliverables, additionalRequirements, status (processing|waiting_approval|finished). Default status to processing if unsure.',
         },
         {
           role: 'user',
@@ -53,7 +53,7 @@ async function normalizeCampaignInput(data: {
             timeline: data.timeline,
             deliverables: data.deliverables,
             additionalRequirements: data.additionalRequirements ?? null,
-            status: data.status ?? "pending",
+            status: data.status ?? "processing",
           }),
         },
       ],
@@ -75,7 +75,11 @@ async function normalizeCampaignInput(data: {
         typeof parsed.additionalRequirements === 'string'
           ? parsed.additionalRequirements
           : data.additionalRequirements ?? undefined,
-      status: parsed.status === 'finished' ? 'finished' : 'pending',
+      status: parsed.status === 'finished'
+        ? 'finished'
+        : parsed.status === 'waiting_approval'
+          ? 'waiting_approval'
+          : 'processing',
     };
   } catch (error) {
     console.error('Campaign normalization failed, using raw input:', error);
@@ -119,7 +123,7 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
         ...validation.data,
         budgetMin: validation.data.budgetMin ?? undefined,
         budgetMax: validation.data.budgetMax ?? undefined,
-        status: "pending",
+        status: "processing",
       });
 
       const { status: _status, ...payload } = normalized;

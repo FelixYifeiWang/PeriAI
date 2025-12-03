@@ -55,7 +55,7 @@ async function findInfluencers() {
       .leftJoin(influencerPreferences, eq(users.id, influencerPreferences.userId))
       .where(eq(users.userType, 'influencer'))
       .orderBy(desc(users.createdAt))
-      .limit(5);
+      .limit(10);
 
     return result.map((r) => ({
       id: r.id,
@@ -84,10 +84,10 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
   try {
     const pending = await storage.getOldestPendingCampaign(user.id);
     if (!pending) {
-      return res.status(404).json({ message: 'No pending campaigns to process' });
+      return res.status(404).json({ message: 'No campaigns to process' });
     }
 
-    await storage.saveCampaignSearchResult(pending.id, { status: 'searching' });
+    await storage.saveCampaignSearchResult(pending.id, { status: 'processing' });
 
     const criteria = await generateCriteria(pending);
     const influencers = await findInfluencers();
