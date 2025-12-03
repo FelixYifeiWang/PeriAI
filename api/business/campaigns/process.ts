@@ -4,7 +4,7 @@ import { requireAuth } from '../../_lib/middleware.js';
 import { storage } from '../../_lib/storage.js';
 import { users, influencerPreferences, type Campaign } from '../../../shared/schema.js';
 import { db } from '../../_lib/db.js';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, and } from 'drizzle-orm';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -41,8 +41,65 @@ async function generateCriteria(campaign: Campaign) {
   }
 }
 
-async function findInfluencers() {
+async function extractFilters(criteriaText: string | null, campaign: Campaign) {
+  if (!criteriaText) return null;
+  const prompt = [
+    "Convert the campaign details and criteria into a JSON filter for querying a DB of influencers.",
+    "JSON shape:",
+    "{ keywords: string[]; languages: string[]; regions: string[]; minBudget?: number; maxBudget?: number; contentTypes?: string[] }",
+    "Keep arrays short (<=5). Omit empty fields.",
+    "",
+    "Campaign info:",
+    `Goal: ${campaign.campaignGoal}`,
+    `Product: ${campaign.productDetails}`,
+    `Audience: ${campaign.targetAudience}`,
+    `Budget: ${campaign.budgetMin ?? ""}-${campaign.budgetMax ?? ""}`,
+    `Timeline: ${campaign.timeline}`,
+    `Deliverables: ${campaign.deliverables}`,
+    `Additional: ${campaign.additionalRequirements ?? ""}`,
+    "",
+    "Criteria text:",
+    criteriaText,
+  ].join("\n");
+
   try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: "Return only JSON matching the requested shape, no prose." },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const parsed = JSON.parse(completion.choices?.[0]?.message?.content ?? "{}");
+    return parsed;
+  } catch (error) {
+    console.error("LLM filter parse error:", error);
+    return null;
+  }
+}
+
+type Filter = {
+  keywords?: string[];
+  languages?: string[];
+  regions?: string[];
+  minBudget?: number;
+  maxBudget?: number;
+  contentTypes?: string[];
+};
+
+async function findInfluencers(filters: Filter | null) {
+  try {
+    const conditions = [eq(users.userType, 'influencer')];
+    if (filters?.languages?.length) {
+      // approximate language preference match
+      conditions.push(eq(users.languagePreference, filters.languages[0].toLowerCase().startsWith("zh") ? "zh" : "en"));
+    }
+    // keyword match on preferences/content
+    const keyword = filters?.keywords?.[0];
+    const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+
     const result = await db
       .select({
         id: users.id,
@@ -51,14 +108,24 @@ async function findInfluencers() {
         firstName: users.firstName,
         lastName: users.lastName,
         preferences: influencerPreferences.personalContentPreferences,
+        baseline: influencerPreferences.monetaryBaseline,
       })
       .from(users)
       .leftJoin(influencerPreferences, eq(users.id, influencerPreferences.userId))
-      .where(eq(users.userType, 'influencer'))
+      .where(whereClause)
       .orderBy(desc(users.createdAt))
       .limit(10);
 
-    return result.map((r) => ({
+    const filtered = result.filter((r) => {
+      if (!filters) return true;
+      const prefs = (r.preferences || "").toLowerCase();
+      const baseline = r.baseline ?? 0;
+      if (filters.maxBudget && baseline > filters.maxBudget) return false;
+      if (keyword && prefs && !prefs.includes(keyword.toLowerCase())) return false;
+      return true;
+    });
+
+    return filtered.map((r) => ({
       id: r.id,
       username: r.username ?? undefined,
       email: r.email ?? undefined,
@@ -134,12 +201,13 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     await storage.saveCampaignSearchResult(candidate.id, { status: 'processing' });
 
     const criteria = await generateCriteria(candidate);
-    const influencers = await findInfluencers();
+    const filters = await extractFilters(criteria, candidate);
+    const influencers = await findInfluencers(filters);
     const ranked = await rerankInfluencers(criteria, influencers);
 
     const updated = await storage.saveCampaignSearchResult(candidate.id, {
       status: 'waiting_approval',
-      searchCriteria: criteria || "No criteria generated",
+      searchCriteria: filters ? JSON.stringify(filters) : criteria || "No criteria generated",
       matchedInfluencers: ranked,
     });
 

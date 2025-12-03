@@ -706,17 +706,35 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                 <details>
                   <summary className="cursor-pointer select-none text-foreground font-medium">Search criteria</summary>
                   <div className="mt-2 space-y-1">
-                    {campaign.searchCriteria
-                      ? campaign.searchCriteria
-                          .split(/\r?\n/)
-                          .filter((line) => line.trim().length > 0)
-                          .map((line, idx) => (
-                            <div key={idx} className="text-muted-foreground">
-                              • {line.trim()}
-                            </div>
-                          ))
-                      : <div className="text-muted-foreground">Not generated yet</div>
-                    }
+                    {(() => {
+                      if (!campaign.searchCriteria) {
+                        return <div className="text-muted-foreground">Not generated yet</div>;
+                      }
+                      let parsed: any;
+                      try {
+                        parsed = JSON.parse(campaign.searchCriteria);
+                      } catch {
+                        parsed = null;
+                      }
+                      if (parsed && typeof parsed === "object") {
+                        const rows = [
+                          parsed.keywords?.length ? `Keywords: ${(parsed.keywords as string[]).join(", ")}` : null,
+                          parsed.languages?.length ? `Languages: ${(parsed.languages as string[]).join(", ")}` : null,
+                          parsed.regions?.length ? `Regions: ${(parsed.regions as string[]).join(", ")}` : null,
+                          parsed.contentTypes?.length ? `Content types: ${(parsed.contentTypes as string[]).join(", ")}` : null,
+                          (parsed.minBudget || parsed.maxBudget) ? `Budget: ${parsed.minBudget ?? "?"} - ${parsed.maxBudget ?? "?"}` : null,
+                        ].filter(Boolean);
+                        return rows.length ? rows.map((line, idx) => <div key={idx} className="text-muted-foreground">• {line}</div>) : <div className="text-muted-foreground">Not generated yet</div>;
+                      }
+                      return campaign.searchCriteria
+                        .split(/\r?\n/)
+                        .filter((line) => line.trim().length > 0)
+                        .map((line, idx) => (
+                          <div key={idx} className="text-muted-foreground">
+                            • {line.trim()}
+                          </div>
+                        ));
+                    })()}
                   </div>
                 </details>
                 <details open>
