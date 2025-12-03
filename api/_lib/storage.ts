@@ -189,11 +189,10 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db
       .select()
       .from(campaigns)
-      .where(eq(campaigns.businessId, businessId))
+      .where(and(eq(campaigns.businessId, businessId), eq(campaigns.status, "pending")))
       .orderBy(campaigns.createdAt)
       .limit(1);
-    if (result && result.status === "pending") return result;
-    return undefined;
+    return result;
   }
 
   async saveCampaignSearchResult(

@@ -4,14 +4,15 @@ import { requireAuth } from '../../_lib/middleware.js';
 import { storage } from '../../_lib/storage.js';
 import { users, influencerPreferences, type Campaign } from '../../../shared/schema.js';
 import { db } from '../../_lib/db.js';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function buildCriteriaPrompt(campaign: Campaign) {
   return [
     "You are generating concise search criteria to find influencers for a campaign.",
-    "Return a short, readable list (3-5 bullet lines) with keywords/traits, nothing else.",
+    "Return a short, readable list (3-6 bullet lines) with keywords/traits, nothing else.",
+    "Prioritize: audience fit, content type, language/region, budget tier, and deliverables.",
     "",
     `Campaign goal: ${campaign.campaignGoal || "N/A"}`,
     `Product: ${campaign.productDetails || "N/A"}`,
@@ -25,7 +26,7 @@ function buildCriteriaPrompt(campaign: Campaign) {
 async function generateCriteria(campaign: Campaign) {
   try {
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       temperature: 0.3,
       messages: [
         { role: 'system', content: 'You write concise bullet criteria for influencer search.' },
@@ -51,8 +52,8 @@ async function findInfluencers() {
         preferences: influencerPreferences.personalContentPreferences,
       })
       .from(users)
-      .leftJoin(influencerPreferences, users.id.eq(influencerPreferences.userId))
-      .where(users.userType.eq('influencer'))
+      .leftJoin(influencerPreferences, eq(users.id, influencerPreferences.userId))
+      .where(eq(users.userType, 'influencer'))
       .orderBy(desc(users.createdAt))
       .limit(5);
 
