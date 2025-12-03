@@ -699,11 +699,17 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                   <span className="text-foreground font-medium">Found influencers:</span>
                   {Array.isArray(campaign.matchedInfluencers) && campaign.matchedInfluencers.length > 0 ? (
                     <ul className="mt-1 space-y-1">
-                      {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string }>).map((inf, idx) => (
+                      {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string }>).map((inf, idx) => (
                         <li key={idx} className="flex flex-col">
-                          <span className="text-foreground">{inf.name || inf.username || "Unknown"}</span>
+                          <span className="text-foreground flex items-center gap-2">
+                            {inf.name || inf.username || "Unknown"}
+                            {typeof inf.score === "number" && (
+                              <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
+                            )}
+                          </span>
                           <span className="text-xs text-muted-foreground">{inf.email || ""}</span>
                           {inf.preferences && <span className="text-xs text-muted-foreground">Prefs: {inf.preferences}</span>}
+                          {inf.reason && <span className="text-xs text-muted-foreground">Reason: {inf.reason}</span>}
                         </li>
                       ))}
                     </ul>

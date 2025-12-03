@@ -70,6 +70,48 @@ async function findInfluencers() {
   }
 }
 
+async function rerankInfluencers(criteria: string | null, influencers: Array<{ id: string; name?: string; username?: string; email?: string; preferences?: string | null }>) {
+  if (!criteria || influencers.length === 0) return influencers;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You rank influencers for a campaign. Return JSON with array key "ranked", each item: {id, score (0-1), reason}. Be concise in reason.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            criteria,
+            influencers,
+          }),
+        },
+      ],
+      response_format: { type: 'json_object' },
+    });
+
+    const parsed = JSON.parse(completion.choices?.[0]?.message?.content ?? '{}') as { ranked?: Array<{ id: string; score?: number; reason?: string }> };
+    const rankedMap = new Map<string, { score?: number; reason?: string }>();
+    (parsed.ranked || []).forEach((r) => {
+      if (r?.id) rankedMap.set(r.id, { score: r.score, reason: r.reason });
+    });
+
+    return influencers
+      .map((inf) => {
+        const extra = rankedMap.get(inf.id) || {};
+        return { ...inf, score: extra.score ?? 0, reason: extra.reason };
+      })
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  } catch (error) {
+    console.error('LLM rerank error:', error);
+    return influencers;
+  }
+}
+
 export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
   // @ts-ignore
   const user = req.user as { id: string; userType: string };
@@ -92,11 +134,12 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
 
     const criteria = await generateCriteria(candidate);
     const influencers = await findInfluencers();
+    const ranked = await rerankInfluencers(criteria, influencers);
 
     const updated = await storage.saveCampaignSearchResult(candidate.id, {
       status: 'waiting_approval',
       searchCriteria: criteria || "No criteria generated",
-      matchedInfluencers: influencers,
+      matchedInfluencers: ranked,
     });
 
     return res.json(updated);
