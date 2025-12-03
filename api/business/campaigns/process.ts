@@ -168,7 +168,12 @@ async function rerankInfluencers(criteria: string | null, influencers: Array<{ i
     return influencers
       .map((inf) => {
         const extra = rankedMap.get(inf.id) || {};
-        return { ...inf, score: extra.score ?? 0, reason: extra.reason };
+        const baseScore = extra.score ?? 0;
+        const displayName = (inf.name || inf.username || "").trim().toLowerCase();
+        const isUnknown = displayName.length === 0;
+        const isTestName = displayName.includes("test");
+        const adjustedScore = isUnknown ? -2 : isTestName ? -1 : baseScore;
+        return { ...inf, score: adjustedScore, reason: extra.reason };
       })
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   } catch (error) {
