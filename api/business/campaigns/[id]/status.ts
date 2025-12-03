@@ -21,7 +21,7 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     return res.status(400).json({ message: 'Campaign ID is required' });
   }
 
-  if (!['waiting_approval', 'finished', 'denied'].includes(status)) {
+  if (!['waiting_approval', 'negotiating', 'deal', 'denied'].includes(status)) {
     return res.status(400).json({ message: 'Invalid status' });
   }
 

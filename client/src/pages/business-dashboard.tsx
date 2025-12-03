@@ -112,6 +112,7 @@ export default function BusinessDashboard() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  const [shouldPollCampaigns, setShouldPollCampaigns] = useState(true);
   const { data: campaigns = [], refetch: refetchCampaigns } = useQuery<Campaign[]>({
     queryKey: ["/api/business/campaigns"],
     queryFn: async () => {
@@ -120,8 +121,41 @@ export default function BusinessDashboard() {
       return res.json();
     },
     staleTime: 60_000,
+    refetchInterval: shouldPollCampaigns ? 5000 : false,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
   const [processingCampaignId, setProcessingCampaignId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const hasActive = campaigns.some((c) => c.status !== "deal" && c.status !== "denied");
+    setShouldPollCampaigns(hasActive);
+  }, [campaigns]);
+
+  // Debug/cheat: press "D" to force latest negotiating campaign to Deal!
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTyping) return;
+      if (e.key === "d" || e.key === "D") {
+        const latestNegotiating = campaigns.find((c) => c.status === "negotiating");
+        if (!latestNegotiating) return;
+        fetch(`/api/business/campaigns/${latestNegotiating.id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ status: "deal" }),
+        })
+          .then(() => refetchCampaigns())
+          .catch(() => {});
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [campaigns, refetchCampaigns]);
 
   const buildChatContext = () => {
     const profileContext = profile
@@ -613,18 +647,20 @@ export default function BusinessDashboard() {
               <h2 className="text-lg font-semibold tracking-tight text-foreground">{copy.statusCard.title}</h2>
             </header>
             <div className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto">
-              <div className="rounded-2xl border border-muted-foreground/15 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-                <p className="text-lg font-semibold">
-                  {profileCompleted ? copy.statusCard.ready : copy.completeProfile}
-                </p>
-                {!profileCompleted && (
-                  <Link href="/business/onboarding">
-                    <Button className="mt-3" size="sm" variant="outline">
-                      {copy.settings}
-                    </Button>
-                  </Link>
-                )}
-              </div>
+              {campaigns.length === 0 && (
+                <div className="rounded-2xl border border-muted-foreground/15 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                  <p className="text-lg font-semibold">
+                    {profileCompleted ? copy.statusCard.ready : copy.completeProfile}
+                  </p>
+                  {!profileCompleted && (
+                    <Link href="/business/onboarding">
+                      <Button className="mt-3" size="sm" variant="outline">
+                        {copy.settings}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              )}
               <div className="mt-4">
                 <CampaignStatusList campaigns={campaigns} onRefetch={refetchCampaigns} />
               </div>
@@ -637,13 +673,15 @@ export default function BusinessDashboard() {
 }
 function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; onRefetch?: () => void }) {
   const badgeClass = (status: Campaign["status"]) =>
-    status === "finished"
+    status === "deal"
       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
       : status === "waiting_approval"
         ? "bg-blue-100 text-blue-700 border border-blue-200"
-        : status === "denied"
-          ? "bg-rose-100 text-rose-700 border border-rose-200"
-        : "bg-amber-100 text-amber-700 border border-amber-200";
+        : status === "negotiating"
+          ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+          : status === "denied"
+            ? "bg-rose-100 text-rose-700 border border-rose-200"
+            : "bg-amber-100 text-amber-700 border border-amber-200";
 
   const formatTimestamp = (value?: string | null) => {
     if (!value) return "New campaign";
@@ -675,13 +713,15 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
           <span
             className={`inline-flex items-center rounded-full px-4 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
           >
-            {campaign.status === "finished"
-              ? "Finished"
+            {campaign.status === "deal"
+              ? "Deal!"
               : campaign.status === "waiting_approval"
                 ? "Waiting for approval"
-                : campaign.status === "denied"
-                  ? "Rejected"
-                  : "Processing"}
+                : campaign.status === "negotiating"
+                  ? "Negotiating"
+                  : campaign.status === "denied"
+                    ? "Rejected"
+                    : "Processing"}
           </span>
         </span>
       </summary>
@@ -763,7 +803,21 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
           )}
           {campaign.status === "waiting_approval" && (
             <div className="mt-3 flex gap-2">
-              <Button variant="default" size="sm" className="rounded-full px-4">
+              <Button
+                variant="default"
+                size="sm"
+                className="rounded-full px-4"
+                onClick={() => {
+                  fetch(`/api/business/campaigns/${campaign.id}/status`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ status: "negotiating" }),
+                  })
+                    .then(() => onRefetch?.())
+                    .catch(() => {});
+                }}
+              >
                 Approve
               </Button>
               <Button
@@ -807,40 +861,45 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
       </div>
 
       <div className="rounded-2xl border border-muted-foreground/15 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-        <div className="px-5 py-4 border-b border-muted-foreground/10">
-          <h3 className="text-md font-semibold tracking-tight text-foreground">History</h3>
-          <p className="text-sm text-muted-foreground">Rejected campaigns</p>
-        </div>
-        <div className="divide-y divide-muted-foreground/10">
-          {historyCampaigns.length === 0 ? (
-            <div className="px-5 py-4 text-sm text-muted-foreground">No history yet.</div>
-          ) : (
-            historyCampaigns.map((campaign) => (
-              <details key={campaign.id} className="px-5 py-3 group">
-                <summary className="flex items-center justify-between gap-3 cursor-pointer select-none">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-slate-400 group-open:rotate-90 transition-transform">▶</span>
-                    <div className="text-sm font-medium text-foreground truncate">
-                      {formatTimestamp(campaign.createdAt as string | null)}
+        <details className="group">
+          <summary className="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer select-none border-b border-muted-foreground/10">
+            <div>
+              <h3 className="text-md font-semibold tracking-tight text-foreground">History</h3>
+              <p className="text-sm text-muted-foreground">Rejected campaigns</p>
+            </div>
+            <span className="text-slate-400 transition-transform group-open:rotate-90">▶</span>
+          </summary>
+          <div className="divide-y divide-muted-foreground/10">
+            {historyCampaigns.length === 0 ? (
+              <div className="px-5 py-4 text-sm text-muted-foreground">No history yet.</div>
+            ) : (
+              historyCampaigns.map((campaign) => (
+                <details key={campaign.id} className="px-5 py-3 group">
+                  <summary className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-slate-400 group-open:rotate-90 transition-transform">▶</span>
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {formatTimestamp(campaign.createdAt as string | null)}
+                      </div>
                     </div>
+                    <span className="inline-flex items-center rounded-full px-4 py-1 text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200">
+                      Rejected
+                    </span>
+                  </summary>
+                  <div className="mt-3 space-y-1 text-sm text-muted-foreground pl-6">
+                    <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
+                    <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Additional requirements:</span> {campaign.additionalRequirements || "None"}</div>
                   </div>
-                  <span className="inline-flex items-center rounded-full px-4 py-1 text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200">
-                    Rejected
-                  </span>
-                </summary>
-                <div className="mt-3 space-y-1 text-sm text-muted-foreground pl-6">
-                  <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
-                  <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
-                  <div><span className="text-foreground font-medium">Audience:</span> {campaign.targetAudience || "Not provided"}</div>
-                  <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
-                  <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
-                  <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
-                  <div><span className="text-foreground font-medium">Additional requirements:</span> {campaign.additionalRequirements || "None"}</div>
-                </div>
-              </details>
-            ))
-          )}
-        </div>
+                </details>
+              ))
+            )}
+          </div>
+        </details>
       </div>
     </div>
   );
