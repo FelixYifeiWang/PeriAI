@@ -415,10 +415,10 @@ export default function BusinessDashboard() {
 
   useEffect(() => {
     if (processingCampaignId) return;
-    const processingCandidate = campaigns.find((c) => c.status === "processing");
-    if (!processingCandidate) return;
+    const candidate = campaigns.find((c) => c.status === "processing" || c.status === "pending");
+    if (!candidate) return;
 
-    setProcessingCampaignId(processingCandidate.id);
+    setProcessingCampaignId(candidate.id);
     fetch("/api/business/campaigns/process", { method: "POST", credentials: "include" })
       .then(() => refetchCampaigns())
       .catch((err) => console.error("Process campaign error:", err))
@@ -678,7 +678,7 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                     {formatTimestamp(campaign.createdAt as string | null)}
                   </div>
                 </div>
-                <span className="flex justify-end w-1/2 max-w-[140px]">
+                <span className="flex justify-end w-1/2 max-w-[170px]">
                   <span
                     className={`inline-flex items-center rounded-full px-4 py-1 text-xs font-medium ${badgeClass(campaign.status)}`}
                   >

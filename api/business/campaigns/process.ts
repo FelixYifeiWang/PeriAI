@@ -82,19 +82,20 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
-    const pending = await storage.getOldestPendingCampaign(user.id);
-    if (!pending) {
+    const candidate = await storage.getOldestPendingCampaign(user.id);
+    if (!candidate) {
       return res.status(404).json({ message: 'No campaigns to process' });
     }
 
-    await storage.saveCampaignSearchResult(pending.id, { status: 'processing' });
+    // Ensure status is processing while we search
+    await storage.saveCampaignSearchResult(candidate.id, { status: 'processing' });
 
-    const criteria = await generateCriteria(pending);
+    const criteria = await generateCriteria(candidate);
     const influencers = await findInfluencers();
 
-    const updated = await storage.saveCampaignSearchResult(pending.id, {
+    const updated = await storage.saveCampaignSearchResult(candidate.id, {
       status: 'waiting_approval',
-      searchCriteria: criteria,
+      searchCriteria: criteria || "No criteria generated",
       matchedInfluencers: influencers,
     });
 

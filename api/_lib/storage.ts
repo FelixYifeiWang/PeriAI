@@ -19,7 +19,7 @@ import {
   type InsertCampaign,
 } from "../../shared/schema.js";
 import { db } from "./db.js";
-import { eq, and, desc, isNotNull, lte } from "drizzle-orm";
+import { eq, and, or, desc, isNotNull, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -36,7 +36,7 @@ export interface IStorage {
   getCampaignsByBusiness(businessId: string): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
-  updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "finished"): Promise<Campaign>;
+  updateCampaignStatus(id: string, status: "pending" | "processing" | "waiting_approval" | "finished"): Promise<Campaign>;
   getOldestPendingCampaign(businessId: string): Promise<Campaign | undefined>;
   saveCampaignSearchResult(
     id: string,
@@ -172,11 +172,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
-    const [result] = await db.insert(campaigns).values(campaign).returning();
+    const [result] = await db.insert(campaigns).values({ ...campaign, status: "processing" }).returning();
     return result;
   }
 
-  async updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "finished"): Promise<Campaign> {
+  async updateCampaignStatus(id: string, status: "pending" | "processing" | "waiting_approval" | "finished"): Promise<Campaign> {
     const [result] = await db
       .update(campaigns)
       .set({ status, updatedAt: new Date() })
@@ -189,7 +189,12 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db
       .select()
       .from(campaigns)
-      .where(and(eq(campaigns.businessId, businessId), eq(campaigns.status, "processing")))
+      .where(
+        and(
+          eq(campaigns.businessId, businessId),
+          or(eq(campaigns.status, "processing"), eq(campaigns.status, "pending")),
+        ),
+      )
       .orderBy(campaigns.createdAt)
       .limit(1);
     return result;

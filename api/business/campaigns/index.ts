@@ -119,12 +119,12 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
         return res.status(400).json({ message: fromError(validation.error).toString() });
       }
 
-      const normalized = await normalizeCampaignInput({
-        ...validation.data,
-        budgetMin: validation.data.budgetMin ?? undefined,
-        budgetMax: validation.data.budgetMax ?? undefined,
-        status: "processing",
-      });
+    const normalized = await normalizeCampaignInput({
+      ...validation.data,
+      budgetMin: validation.data.budgetMin ?? undefined,
+      budgetMax: validation.data.budgetMax ?? undefined,
+      status: "processing",
+    });
 
       const { status: _status, ...payload } = normalized;
 
