@@ -692,7 +692,7 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
               </summary>
               <div className="mt-3 space-y-2 text-sm text-muted-foreground pl-6">
                 <details>
-                  <summary className="cursor-pointer select-none text-foreground font-medium">Campaign info</summary>
+                  <summary className="cursor-pointer select-none text-foreground font-medium">Campaign information</summary>
                   <div className="mt-2 space-y-1">
                     <div><span className="text-foreground font-medium">Goal:</span> {campaign.campaignGoal || "Not provided"}</div>
                     <div><span className="text-foreground font-medium">Product:</span> {campaign.productDetails || "Not provided"}</div>
@@ -700,11 +700,24 @@ function CampaignStatusList({ campaigns }: { campaigns: Campaign[] }) {
                     <div><span className="text-foreground font-medium">Budget:</span> {formatBudgetLocal(campaign.budgetMin ?? undefined, campaign.budgetMax ?? undefined)}</div>
                     <div><span className="text-foreground font-medium">Timeline:</span> {campaign.timeline || "Not provided"}</div>
                     <div><span className="text-foreground font-medium">Deliverables:</span> {campaign.deliverables || "Not provided"}</div>
+                    <div><span className="text-foreground font-medium">Additional requirements:</span> {campaign.additionalRequirements || "None"}</div>
                   </div>
                 </details>
                 <details>
                   <summary className="cursor-pointer select-none text-foreground font-medium">Search criteria</summary>
-                  <div className="mt-2 whitespace-pre-wrap">{campaign.searchCriteria || "Not generated yet"}</div>
+                  <div className="mt-2 space-y-1">
+                    {campaign.searchCriteria
+                      ? campaign.searchCriteria
+                          .split(/\r?\n/)
+                          .filter((line) => line.trim().length > 0)
+                          .map((line, idx) => (
+                            <div key={idx} className="text-muted-foreground">
+                              • {line.trim()}
+                            </div>
+                          ))
+                      : <div className="text-muted-foreground">Not generated yet</div>
+                    }
+                  </div>
                 </details>
                 <details open>
                   <summary className="cursor-pointer select-none text-foreground font-medium">Found influencers</summary>

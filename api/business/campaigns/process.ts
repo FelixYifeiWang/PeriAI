@@ -20,6 +20,7 @@ function buildCriteriaPrompt(campaign: Campaign) {
     `Budget: ${campaign.budgetMin ?? "?"} - ${campaign.budgetMax ?? "?"}`,
     `Timeline: ${campaign.timeline || "N/A"}`,
     `Deliverables: ${campaign.deliverables || "N/A"}`,
+    `Additional requirements: ${campaign.additionalRequirements || "None"}`,
   ].join("\n");
 }
 
