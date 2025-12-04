@@ -22,17 +22,33 @@ function resolveLanguage(user?: User | null): SupportedLanguage {
 }
 
 async function autoSendInquiriesForCampaign(campaign: Campaign, businessUser: User | undefined | null, businessProfile: BusinessProfile | undefined | null) {
-  const matches = Array.isArray((campaign as any).matchedInfluencers)
-    ? ((campaign as any).matchedInfluencers as Array<{ id?: string }>)
-    : [];
+  // Normalize matched influencers (jsonb can come back as object or stringified)
+  let matches: Array<{ id?: string }> = [];
+  const rawMatches: unknown = (campaign as any).matchedInfluencers;
+  if (Array.isArray(rawMatches)) {
+    matches = rawMatches as Array<{ id?: string }>;
+  } else if (typeof rawMatches === 'string') {
+    try {
+      const parsed = JSON.parse(rawMatches);
+      if (Array.isArray(parsed)) {
+        matches = parsed;
+      }
+    } catch {
+      matches = [];
+    }
+  }
 
-  if (!matches.length) return;
+  if (!matches.length) {
+    console.warn('⚠️  No matched influencers on campaign, skipping outreach', campaign.id);
+    return 0;
+  }
   const businessEmail = businessUser?.email;
   if (!businessEmail) {
     console.warn('⚠️  No business email found, skipping automated outreach');
-    return;
+    return 0;
   }
 
+  let created = 0;
   for (const match of matches) {
     const influencerId = match?.id;
     if (!influencerId) continue;
@@ -110,10 +126,13 @@ async function autoSendInquiriesForCampaign(campaign: Campaign, businessUser: Us
       );
 
       await storage.closeInquiryChat(inquiry.id, recommendation);
+      created += 1;
     } catch (error) {
       console.error('❌ Failed to auto-send inquiry for campaign', campaign.id, 'to', influencerId, error);
     }
   }
+
+  return created;
 }
 
 export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
@@ -151,9 +170,14 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     if (status === 'negotiating' && previousStatus !== 'negotiating') {
       const businessUser = await storage.getUser(user.id);
       const businessProfile = await storage.getBusinessProfile(user.id);
-      await autoSendInquiriesForCampaign(campaign, businessUser, businessProfile);
-      const waiting = await storage.updateCampaignStatus(id, 'waiting_response');
-      return res.json(waiting);
+      const created = await autoSendInquiriesForCampaign(campaign, businessUser, businessProfile);
+      if (created && created > 0) {
+        const waiting = await storage.updateCampaignStatus(id, 'waiting_response');
+        return res.json(waiting);
+      } else {
+        console.warn('⚠️  No inquiries created; staying in negotiating');
+        return res.json(updated);
+      }
     }
 
     return res.json(updated);
