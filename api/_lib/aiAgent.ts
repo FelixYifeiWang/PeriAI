@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { InfluencerPreferences, Message } from "../../shared/schema.js";
+import type { BusinessProfile, Campaign, InfluencerPreferences, Message, User } from "../../shared/schema.js";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -122,6 +122,8 @@ const FALLBACK_RECOMMENDATION: Record<SupportedLanguage, string> = {
   zh: "**需要更多信息**\n\n暂时无法生成建议，请手动查看对话内容。\n\n**关键信息：**\n- 预算：未提及\n- 时间：未提及\n- 交付内容：未提及",
 };
 
+const FALLBACK_CAMPAIGN_MESSAGE = "We'd love to collaborate on this campaign. Are you open to discussing deliverables and timeline?";
+
 function getLanguageInstruction(language: SupportedLanguage) {
   return LANGUAGE_DIRECTIVES[language] ?? LANGUAGE_DIRECTIVES.en;
 }
@@ -214,6 +216,83 @@ One sentence explaining the reasoning (be specific).
   If applicable, add a final line "Message to influencer: <content>" capturing any relay request.
 
 Keep it short and actionable.`;
+}
+
+export type GeneratedCampaignInquiry = {
+  message: string;
+  offerPrice?: number;
+};
+
+function computeFallbackOfferPrice(
+  preferences?: InfluencerPreferences | null,
+  campaign?: Campaign | null,
+): number | undefined {
+  const baseline = preferences?.monetaryBaseline ?? 500;
+  const budgetMin = campaign?.budgetMin ?? baseline;
+  const budgetMax = campaign?.budgetMax ?? budgetMin;
+  if (budgetMax <= 0) return baseline;
+  const anchor = Math.max(baseline, budgetMin);
+  const midpoint = (anchor + budgetMax) / 2;
+  const capped = Math.min(Math.max(anchor, midpoint), budgetMax);
+  return Math.round(capped);
+}
+
+export async function draftInquiryFromCampaign(params: {
+  campaign: Campaign;
+  businessProfile?: BusinessProfile | null;
+  influencerPreferences?: InfluencerPreferences | null;
+  influencer?: User | null;
+  language?: SupportedLanguage;
+}): Promise<GeneratedCampaignInquiry> {
+  const language: SupportedLanguage = params.language ?? (params.influencer?.languagePreference === "zh" ? "zh" : "en");
+  const fallback: GeneratedCampaignInquiry = {
+    message: FALLBACK_CAMPAIGN_MESSAGE,
+    offerPrice: computeFallbackOfferPrice(params.influencerPreferences, params.campaign),
+  };
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: [
+            "You draft a concise outreach message from a brand to an influencer for a paid collaboration.",
+            "Tone: conversational chat (no email formality), 2-4 sentences, clear ask.",
+            "Find a middle-ground offer between the influencer's baseline and the campaign budget; pick one concrete number.",
+            "Mention key details: goal, deliverables, timeline, and why the fit makes sense.",
+            "Return JSON only: { message: string; offerPrice?: number }.",
+            `Language: ${language === "zh" ? "Simplified Chinese" : "English"}`
+          ].join("\n"),
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            influencer: {
+              id: params.influencer?.id,
+              name: [params.influencer?.firstName, params.influencer?.lastName].filter(Boolean).join(" ") || params.influencer?.username,
+              language: params.influencer?.languagePreference ?? "en",
+            },
+            influencerPreferences: params.influencerPreferences,
+            campaign: params.campaign,
+            businessProfile: params.businessProfile,
+          }),
+        },
+      ],
+    });
+
+    const parsed = JSON.parse(completion.choices?.[0]?.message?.content ?? "{}") as GeneratedCampaignInquiry;
+    const message = typeof parsed.message === "string" && parsed.message.trim().length > 0
+      ? parsed.message.trim()
+      : fallback.message;
+    const offerPrice = Number.isFinite(parsed.offerPrice) ? Math.round(parsed.offerPrice as number) : fallback.offerPrice;
+    return { message, offerPrice };
+  } catch (error) {
+    console.error("Error drafting campaign inquiry:", error);
+    return fallback;
+  }
 }
 
 export async function generateInquiryResponse(

@@ -1,6 +1,120 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuth } from '../../../_lib/middleware.js';
 import { storage } from '../../../_lib/storage.js';
+import { draftInquiryFromCampaign, generateInquiryResponse, generateRecommendation, type SupportedLanguage } from '../../../_lib/aiAgent.js';
+import type { BusinessProfile, Campaign, InfluencerPreferences, User } from '../../../../shared/schema.js';
+
+function getDefaultPreferences(userId: string): InfluencerPreferences {
+  return {
+    id: 'default',
+    userId,
+    personalContentPreferences: 'Various collaboration opportunities',
+    monetaryBaseline: 500,
+    contentLength: 'Flexible',
+    additionalGuidelines: null,
+    createdAt: null,
+    updatedAt: null,
+  };
+}
+
+function resolveLanguage(user?: User | null): SupportedLanguage {
+  return user?.languagePreference === 'zh' ? 'zh' : 'en';
+}
+
+async function autoSendInquiriesForCampaign(campaign: Campaign, businessUser: User | undefined | null, businessProfile: BusinessProfile | undefined | null) {
+  const matches = Array.isArray((campaign as any).matchedInfluencers)
+    ? ((campaign as any).matchedInfluencers as Array<{ id?: string }>)
+    : [];
+
+  if (!matches.length) return;
+  const businessEmail = businessUser?.email;
+  if (!businessEmail) {
+    console.warn('⚠️  No business email found, skipping automated outreach');
+    return;
+  }
+
+  for (const match of matches) {
+    const influencerId = match?.id;
+    if (!influencerId) continue;
+
+    try {
+      const influencer = await storage.getUser(influencerId);
+      const prefs = (await storage.getInfluencerPreferences(influencerId)) ?? getDefaultPreferences(influencerId);
+      const language = resolveLanguage(influencer);
+
+      const drafted = await draftInquiryFromCampaign({
+        campaign,
+        businessProfile,
+        influencerPreferences: prefs,
+        influencer,
+        language,
+      });
+
+      const price =
+        Number.isFinite(drafted.offerPrice) && drafted.offerPrice != null
+          ? Math.round(drafted.offerPrice as number)
+          : undefined;
+
+      const companyInfo =
+        businessProfile?.description ||
+        businessProfile?.companyName ||
+        businessProfile?.industry ||
+        undefined;
+
+      const inquiry = await storage.createInquiry({
+        influencerId,
+        businessId: campaign.businessId,
+        campaignId: campaign.id,
+        businessEmail,
+        message: drafted.message,
+        price: price ?? undefined,
+        companyInfo,
+      });
+
+      await storage.addMessage({
+        inquiryId: inquiry.id,
+        role: 'user',
+        content: drafted.message,
+      });
+
+      const aiResponse = await generateInquiryResponse(
+        {
+          businessEmail,
+          message: drafted.message,
+          price: price ?? undefined,
+          companyInfo,
+        },
+        prefs,
+        language,
+      );
+
+      await storage.updateInquiryStatus(inquiry.id, 'pending', aiResponse);
+      await storage.addMessage({
+        inquiryId: inquiry.id,
+        role: 'assistant',
+        content: aiResponse,
+      });
+
+      const conversationHistory = await storage.getMessagesByInquiry(inquiry.id);
+
+      const recommendation = await generateRecommendation(
+        conversationHistory,
+        {
+          businessEmail,
+          message: drafted.message,
+          price: price ?? undefined,
+          companyInfo,
+        },
+        prefs,
+        language,
+      );
+
+      await storage.closeInquiryChat(inquiry.id, recommendation);
+    } catch (error) {
+      console.error('❌ Failed to auto-send inquiry for campaign', campaign.id, 'to', influencerId, error);
+    }
+  }
+}
 
 export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
   // @ts-ignore
@@ -21,7 +135,7 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     return res.status(400).json({ message: 'Campaign ID is required' });
   }
 
-  if (!['waiting_approval', 'negotiating', 'deal', 'denied'].includes(status)) {
+  if (!['waiting_approval', 'negotiating', 'waiting_response', 'deal', 'denied'].includes(status)) {
     return res.status(400).json({ message: 'Invalid status' });
   }
 
@@ -31,7 +145,17 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
       return res.status(404).json({ message: 'Campaign not found' });
     }
 
+    const previousStatus = campaign.status;
     const updated = await storage.updateCampaignStatus(id, status);
+
+    if (status === 'negotiating' && previousStatus !== 'negotiating') {
+      const businessUser = await storage.getUser(user.id);
+      const businessProfile = await storage.getBusinessProfile(user.id);
+      await autoSendInquiriesForCampaign(campaign, businessUser, businessProfile);
+      const waiting = await storage.updateCampaignStatus(id, 'waiting_response');
+      return res.json(waiting);
+    }
+
     return res.json(updated);
   } catch (error) {
     console.error('Error updating campaign status:', error);

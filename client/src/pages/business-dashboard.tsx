@@ -677,11 +677,13 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
       : status === "waiting_approval"
         ? "bg-blue-100 text-blue-700 border border-blue-200"
-        : status === "negotiating"
+      : status === "negotiating"
           ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-          : status === "denied"
-            ? "bg-rose-100 text-rose-700 border border-rose-200"
-            : "bg-amber-100 text-amber-700 border border-amber-200";
+          : status === "waiting_response"
+            ? "bg-violet-100 text-violet-700 border border-violet-200"
+            : status === "denied"
+              ? "bg-rose-100 text-rose-700 border border-rose-200"
+              : "bg-amber-100 text-amber-700 border border-amber-200";
 
   const formatTimestamp = (value?: string | null) => {
     if (!value) return "New campaign";
@@ -719,9 +721,11 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
                 ? "Waiting for approval"
                 : campaign.status === "negotiating"
                   ? "Negotiating"
-                  : campaign.status === "denied"
-                    ? "Rejected"
-                    : "Processing"}
+                  : campaign.status === "waiting_response"
+                    ? "Waiting for response"
+                    : campaign.status === "denied"
+                      ? "Rejected"
+                      : "Processing"}
           </span>
         </span>
       </summary>

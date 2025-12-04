@@ -30,6 +30,19 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     // Update status in database
     const updatedInquiry = await storage.updateInquiryStatus(id, status, message);
 
+    // If the inquiry originated from a campaign, reflect the decision on the campaign
+    if (inquiry.campaignId) {
+      try {
+        if (status === 'approved') {
+          await storage.updateCampaignStatus(inquiry.campaignId, 'deal');
+        } else if (status === 'rejected') {
+          await storage.updateCampaignStatus(inquiry.campaignId, 'denied');
+        }
+      } catch (campaignError) {
+        console.error('⚠️ Failed to update campaign status from inquiry decision:', campaignError);
+      }
+    }
+
     // Send email notification (not for pending status)
     if (status !== 'pending') {
       // @ts-ignore

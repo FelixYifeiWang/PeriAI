@@ -29,7 +29,7 @@ async function normalizeCampaignInput(data: {
   timeline: string;
   deliverables: string;
   additionalRequirements?: string | null;
-  status?: "processing" | "waiting_approval" | "negotiating" | "deal";
+  status?: "processing" | "waiting_approval" | "negotiating" | "waiting_response" | "deal";
 }) {
   try {
     const completion = await openai.chat.completions.create({
@@ -39,7 +39,7 @@ async function normalizeCampaignInput(data: {
         {
           role: 'system',
           content:
-            'You clean campaign input for database storage. Return JSON only. Keep text concise and specific. Normalize budget numbers (integers, no currency symbols). Preserve meaning; do not invent data. Keys: productDetails, campaignGoal, targetAudience, budgetMin, budgetMax, timeline, deliverables, additionalRequirements, status (processing|waiting_approval|negotiating|deal). Default status to processing if unsure.',
+            'You clean campaign input for database storage. Return JSON only. Keep text concise and specific. Normalize budget numbers (integers, no currency symbols). Preserve meaning; do not invent data. Keys: productDetails, campaignGoal, targetAudience, budgetMin, budgetMax, timeline, deliverables, additionalRequirements, status (processing|waiting_approval|negotiating|waiting_response|deal). Default status to processing if unsure.',
         },
         {
           role: 'user',
@@ -81,7 +81,9 @@ async function normalizeCampaignInput(data: {
           ? 'waiting_approval'
           : parsed.status === 'negotiating'
             ? 'negotiating'
-            : 'processing',
+            : parsed.status === 'waiting_response'
+              ? 'waiting_response'
+              : 'processing',
     };
   } catch (error) {
     console.error('Campaign normalization failed, using raw input:', error);

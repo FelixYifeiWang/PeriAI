@@ -36,7 +36,7 @@ export interface IStorage {
   getCampaignsByBusiness(businessId: string): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
-  updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "negotiating" | "deal" | "denied"): Promise<Campaign>;
+  updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "negotiating" | "waiting_response" | "deal" | "denied"): Promise<Campaign>;
   getOldestProcessingCampaign(businessId: string): Promise<Campaign | undefined>;
   saveCampaignSearchResult(
     id: string,
@@ -176,7 +176,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "negotiating" | "deal" | "denied"): Promise<Campaign> {
+  async updateCampaignStatus(id: string, status: "processing" | "waiting_approval" | "negotiating" | "waiting_response" | "deal" | "denied"): Promise<Campaign> {
     const [result] = await db
       .update(campaigns)
       .set({ status, updatedAt: new Date() })
