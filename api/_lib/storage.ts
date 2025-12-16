@@ -22,7 +22,7 @@ import {
   type InsertInfluencerSocialAccount,
 } from "../../shared/schema.js";
 import { db } from "./db.js";
-import { eq, and, or, desc, isNotNull, lte } from "drizzle-orm";
+import { eq, and, or, desc, isNotNull, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -361,7 +361,11 @@ export class DatabaseStorage implements IStorage {
   async upsertSocialAccount(account: InsertInfluencerSocialAccount): Promise<InfluencerSocialAccount> {
     const [result] = await db
       .insert(influencerSocialAccounts)
-      .values(account)
+      .values({
+        ...account,
+        followers: typeof account.followers === "number" ? account.followers : null,
+        likes: typeof account.likes === "number" ? account.likes : null,
+      })
       .onConflictDoUpdate({
         target: [influencerSocialAccounts.userId, influencerSocialAccounts.platform],
         set: {
@@ -418,8 +422,8 @@ export class DatabaseStorage implements IStorage {
     if (!accounts.length) return;
 
     const sorted = [...accounts].sort((a, b) => {
-      const af = a.followers ?? -1;
-      const bf = b.followers ?? -1;
+      const af = typeof a.followers === "number" ? a.followers : -1;
+      const bf = typeof b.followers === "number" ? b.followers : -1;
       return bf - af;
     });
     const primaryPlatform = sorted[0]?.platform;
