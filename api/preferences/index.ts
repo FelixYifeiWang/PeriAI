@@ -27,7 +27,15 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
         return res.status(400).json({ message: fromError(validation.error).toString() });
       }
 
-      const prefs = await storage.upsertInfluencerPreferences(validation.data);
+      const prefs = await storage.upsertInfluencerPreferences({
+        ...validation.data,
+        socialLinks:
+          validation.data.socialLinks && typeof validation.data.socialLinks === 'object'
+            ? Object.fromEntries(
+                Object.entries(validation.data.socialLinks).filter(([, value]) => typeof value === 'string' && value.trim().length > 0),
+              )
+            : undefined,
+      });
       res.json(prefs);
     } catch (error) {
       console.error('Error saving preferences:', error);

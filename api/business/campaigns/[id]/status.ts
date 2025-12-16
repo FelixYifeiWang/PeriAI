@@ -12,6 +12,7 @@ function getDefaultPreferences(userId: string): InfluencerPreferences {
     monetaryBaseline: 500,
     contentLength: 'Flexible',
     additionalGuidelines: null,
+    socialLinks: {},
     createdAt: null,
     updatedAt: null,
   };

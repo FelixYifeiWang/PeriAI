@@ -50,10 +50,16 @@ const translations = {
         labels: {
           personal: "Personal content preferences",
           additional: "Additional guidelines (optional)",
+          socials: "Social links (optional)",
         },
         placeholders: {
           personal: "Themes you love, brand values you align with, or types of stories you share.",
           additional: "Any do’s and don’ts, collaboration preferences, or timelines.",
+          socials: {
+            instagram: "https://instagram.com/you",
+            tiktok: "https://www.tiktok.com/@you",
+            youtube: "https://www.youtube.com/@you",
+          },
         },
       },
     },
@@ -124,10 +130,16 @@ const translations = {
         labels: {
           personal: "个人内容偏好",
           additional: "额外指引（可选）",
+          socials: "社媒链接（可选）",
         },
         placeholders: {
           personal: "你擅长的主题、契合的品牌价值观、或经常分享的故事方向。",
           additional: "填写合作的其他要求、禁忌或时间安排等。",
+          socials: {
+            instagram: "https://instagram.com/你的账号",
+            tiktok: "https://www.tiktok.com/@你的账号",
+            youtube: "https://www.youtube.com/@你的频道",
+          },
         },
       },
     },
@@ -215,6 +227,11 @@ export default function OnboardingPage() {
   const [contentLength, setContentLength] = useState<ContentLength | "">("");
   const [personalPreferences, setPersonalPreferences] = useState("");
   const [additionalGuidelines, setAdditionalGuidelines] = useState("");
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>({
+    instagram: "",
+    tiktok: "",
+    youtube: "",
+  });
   const [error, setError] = useState<string | null>(null);
 
   const { data: preferences, isLoading: preferencesLoading } =
@@ -228,16 +245,29 @@ export default function OnboardingPage() {
       retry: 1,
     });
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      setLocation("/influencer/login");
-      return;
-    }
+useEffect(() => {
+  if (!isLoading && !isAuthenticated) {
+    setLocation("/influencer/login");
+    return;
+  }
 
     if (!isLoading && !preferencesLoading && preferences) {
-      setLocation("/influencer");
-    }
-  }, [isAuthenticated, isLoading, preferences, preferencesLoading, setLocation]);
+    setLocation("/influencer");
+  }
+}, [isAuthenticated, isLoading, preferences, preferencesLoading, setLocation]);
+
+useEffect(() => {
+  if (preferences) {
+    setPersonalPreferences(preferences.personalContentPreferences || "");
+    setContentLength((preferences.contentLength as ContentLength) || "");
+    setAdditionalGuidelines(preferences.additionalGuidelines || "");
+    setSocialLinks({
+      instagram: (preferences.socialLinks as Record<string, string> | undefined)?.instagram ?? "",
+      tiktok: (preferences.socialLinks as Record<string, string> | undefined)?.tiktok ?? "",
+      youtube: (preferences.socialLinks as Record<string, string> | undefined)?.youtube ?? "",
+    });
+  }
+}, [preferences]);
 
   const parsedBaselinePreview = useMemo(
     () => parseMonetaryBaseline(monetaryInput),
@@ -250,6 +280,7 @@ export default function OnboardingPage() {
       monetaryBaseline: number;
       contentLength: ContentLength;
       additionalGuidelines?: string;
+      socialLinks?: Record<string, string>;
     }) => {
       const response = await fetch("/api/preferences", {
         method: "POST",
@@ -308,12 +339,12 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (stepIndex === 2) {
-      if (!contentLength) {
-        setError(copy.errors.contentLengthMissing);
-        return;
-      }
-      setStepIndex(3);
+  if (stepIndex === 2) {
+    if (!contentLength) {
+      setError(copy.errors.contentLengthMissing);
+      return;
+    }
+    setStepIndex(3);
       return;
     }
 
@@ -323,19 +354,22 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (!monetaryBaseline) {
-      setError(copy.errors.monetaryMissing);
-      setStepIndex(0);
-      return;
-    }
+  if (!monetaryBaseline) {
+    setError(copy.errors.monetaryMissing);
+    setStepIndex(0);
+    return;
+  }
 
-    savePreferences.mutate({
-      personalContentPreferences: trimmedPreferences,
-      monetaryBaseline,
-      contentLength: contentLength as ContentLength,
-      additionalGuidelines: additionalGuidelines.trim() || undefined,
-    });
-  };
+  savePreferences.mutate({
+    personalContentPreferences: trimmedPreferences,
+    monetaryBaseline,
+    contentLength: contentLength as ContentLength,
+    additionalGuidelines: additionalGuidelines.trim() || undefined,
+    socialLinks: Object.fromEntries(
+      Object.entries(socialLinks).filter(([, value]) => value && value.trim().length > 0),
+    ),
+  });
+};
 
   const renderStep = () => {
     switch (stepIndex) {
@@ -453,6 +487,29 @@ export default function OnboardingPage() {
                   className="w-full rounded-3xl border border-transparent bg-white/85 px-5 py-3 text-base text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
                   placeholder={copy.steps.preferences.placeholders.additional}
                 />
+              </div>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-[#573ccb]">
+                  {copy.steps.preferences.labels.socials}
+                </p>
+                {(["instagram", "tiktok", "youtube"] as const).map((platform) => (
+                  <div key={platform} className="space-y-1">
+                    <label className="text-xs uppercase tracking-wide text-slate-500">
+                      {platform}
+                    </label>
+                    <input
+                      value={socialLinks[platform] ?? ""}
+                      onChange={(event) =>
+                        setSocialLinks((prev) => ({
+                          ...prev,
+                          [platform]: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-3xl border border-transparent bg-white/85 px-4 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+                      placeholder={copy.steps.preferences.placeholders.socials[platform]}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           </div>

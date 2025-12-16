@@ -70,6 +70,7 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
         monetaryBaseline: 500,
         contentLength: 'Flexible',
         additionalGuidelines: null,
+        socialLinks: {},
         createdAt: null,
         updatedAt: null,
       };

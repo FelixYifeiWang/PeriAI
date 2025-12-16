@@ -94,6 +94,12 @@ const translations = {
       ] as const,
       additionalGuidelinesLabel: "Additional Guidelines (Optional)",
       additionalGuidelinesPlaceholder: "Any other guidelines or requirements for collaborations...",
+      socialLinksLabel: "Social links (optional)",
+      socialPlaceholders: {
+        instagram: "https://instagram.com/you",
+        tiktok: "https://www.tiktok.com/@you",
+        youtube: "https://www.youtube.com/@you",
+      },
       buttons: {
         save: "Save Preferences",
         saving: "Saving...",
@@ -187,6 +193,12 @@ I will not promote:
       ] as const,
       additionalGuidelinesLabel: "其他指引（可选）",
       additionalGuidelinesPlaceholder: "填写合作的其他要求或注意事项…",
+      socialLinksLabel: "社媒链接（可选）",
+      socialPlaceholders: {
+        instagram: "https://instagram.com/你的账号",
+        tiktok: "https://www.tiktok.com/@你的账号",
+        youtube: "https://www.youtube.com/@你的频道",
+      },
       buttons: {
         save: "保存偏好",
         saving: "保存中…",
@@ -224,6 +236,7 @@ const buildPreferencesSchema = (validation: ValidationCopy) =>
     monetaryBaseline: z.coerce.number().min(1, validation.monetaryBaseline),
     contentLength: z.string().min(1, validation.contentLength),
     additionalGuidelines: z.string().optional(),
+    socialLinks: z.record(z.string()).optional(),
   });
 
 type PreferencesFormData = z.infer<ReturnType<typeof buildPreferencesSchema>>;
@@ -271,6 +284,11 @@ export default function InfluencerSetup() {
       monetaryBaseline: 2000,
       contentLength: "flexible",
       additionalGuidelines: copy.aiInstructions.defaultAdditionalGuidelines,
+      socialLinks: {
+        instagram: "",
+        tiktok: "",
+        youtube: "",
+      },
     }),
     [copy],
   );
@@ -287,6 +305,11 @@ export default function InfluencerSetup() {
         monetaryBaseline: preferences.monetaryBaseline,
         contentLength: preferences.contentLength,
         additionalGuidelines: preferences.additionalGuidelines || "",
+        socialLinks: {
+          instagram: (preferences.socialLinks as Record<string, string> | undefined)?.instagram ?? "",
+          tiktok: (preferences.socialLinks as Record<string, string> | undefined)?.tiktok ?? "",
+          youtube: (preferences.socialLinks as Record<string, string> | undefined)?.youtube ?? "",
+        },
       });
     }
   }, [preferences, form]);
@@ -335,9 +358,15 @@ export default function InfluencerSetup() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: PreferencesFormData) => {
+      const payload = {
+        ...data,
+        socialLinks: Object.fromEntries(
+          Object.entries(data.socialLinks ?? {}).filter(([, value]) => value && value.trim().length > 0),
+        ),
+      };
       const response = await fetch("/api/preferences", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
@@ -620,6 +649,33 @@ export default function InfluencerSetup() {
                     </FormItem>
                   )}
                 />
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {copy.aiInstructions.socialLinksLabel}
+                  </p>
+                  {(["instagram", "tiktok", "youtube"] as const).map((platform) => (
+                    <FormField
+                      key={platform}
+                      control={form.control}
+                      name={`socialLinks.${platform}` as const}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                            {platform}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={copy.aiInstructions.socialPlaceholders[platform]}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
 
                 <div className="flex gap-3 pt-2">
                   <Button

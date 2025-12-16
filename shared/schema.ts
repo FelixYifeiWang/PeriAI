@@ -111,6 +111,7 @@ export const influencerPreferences = pgTable("influencer_preferences", {
   monetaryBaseline: integer("monetary_baseline").notNull(),
   contentLength: varchar("content_length").notNull(),
   additionalGuidelines: text("additional_guidelines"),
+  socialLinks: jsonb("social_links").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
