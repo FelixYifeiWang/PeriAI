@@ -57,7 +57,7 @@ const translations = {
         labels: {
           instagram: "Instagram",
           tiktok: "TikTok",
-          twitter: "X/Twitter",
+          youtube: "YouTube",
         },
       },
     },
@@ -101,7 +101,7 @@ const translations = {
         labels: {
           instagram: "Instagram",
           tiktok: "TikTok",
-          twitter: "X/Twitter",
+          youtube: "YouTube",
         },
       },
     },
@@ -116,7 +116,7 @@ const translations = {
   },
 } as const;
 
-const socialsList = ["instagram", "tiktok", "x/twitter"] as const;
+const socialsList = ["instagram", "tiktok", "youtube"] as const;
 
 const businessProfileSchema = z.object({
   companyName: z.string().min(1),
@@ -164,7 +164,7 @@ export default function BusinessSettingsPage() {
       socialLinks: {
         instagram: "",
         tiktok: "",
-        "x/twitter": "",
+        youtube: "",
       },
     },
   });
@@ -181,7 +181,7 @@ export default function BusinessSettingsPage() {
         socialLinks: {
           instagram: links["instagram"] ?? "",
           tiktok: links["tiktok"] ?? "",
-          "x/twitter": links["x/twitter"] ?? links["twitter"] ?? "",
+          youtube: links["youtube"] ?? "",
         },
       });
     }
@@ -383,12 +383,12 @@ export default function BusinessSettingsPage() {
                     name={`socialLinks.${platform}` as const}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{copy.cards.socials.labels[platform === "x/twitter" ? "twitter" : platform]}</FormLabel>
+                        <FormLabel>{copy.cards.socials.labels[platform]}</FormLabel>
                         <FormControl>
                           <Input
                             placeholder={
-                              platform === "x/twitter"
-                                ? "https://twitter.com/yourbrand"
+                              platform === "youtube"
+                                ? "https://www.youtube.com/yourbrand"
                                 : `https://www.${platform}.com/yourbrand`
                             }
                             {...field}

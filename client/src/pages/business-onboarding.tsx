@@ -67,7 +67,7 @@ const translations = {
       },
     },
     companySizeOptions: ["1-5", "6-20", "21-50", "51-100", "100+"],
-    socials: ["instagram", "tiktok", "twitter"],
+    socials: ["instagram", "tiktok", "youtube"],
   },
   zh: {
     loading: "加载中…",
@@ -107,7 +107,7 @@ const translations = {
       },
     },
     companySizeOptions: ["1-5", "6-20", "21-50", "51-100", "100+"],
-    socials: ["instagram", "tiktok", "x/twitter"],
+    socials: ["instagram", "tiktok", "youtube"],
   },
 } as const;
 
@@ -393,11 +393,7 @@ export default function BusinessOnboardingPage() {
                       [platform]: event.target.value,
                     }))
                   }
-                  placeholder={
-                    platform === "x/twitter"
-                      ? "https://twitter.com/yourbrand"
-                      : `https://www.${platform}.com/yourbrand`
-                  }
+                  placeholder={`https://www.${platform}.com/yourbrand`}
                   className="w-full rounded-3xl border border-transparent bg-white/85 px-5 py-3 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
                 />
               </div>
