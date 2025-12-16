@@ -359,17 +359,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertSocialAccount(account: InsertInfluencerSocialAccount): Promise<InfluencerSocialAccount> {
+    const sanitizedFollowers = typeof account.followers === "number" ? account.followers : null;
+    const sanitizedLikes = typeof account.likes === "number" ? account.likes : null;
+
     const [result] = await db
       .insert(influencerSocialAccounts)
       .values({
         ...account,
-        followers: typeof account.followers === "number" ? account.followers : null,
-        likes: typeof account.likes === "number" ? account.likes : null,
+        followers: sanitizedFollowers,
+        likes: sanitizedLikes,
       })
       .onConflictDoUpdate({
         target: [influencerSocialAccounts.userId, influencerSocialAccounts.platform],
         set: {
           ...account,
+          followers: sanitizedFollowers ?? sql`excluded.followers`,
+          likes: sanitizedLikes ?? sql`excluded.likes`,
           updatedAt: new Date(),
         },
       })

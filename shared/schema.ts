@@ -8,6 +8,7 @@ import {
   varchar,
   integer,
   boolean,
+  bigint,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -150,6 +151,8 @@ export const insertInfluencerSocialAccountSchema = createInsertSchema(influencer
   id: true,
   createdAt: true,
   updatedAt: true,
+  lastSyncedAt: true,
+  isPrimary: true,
 });
 
 export type InsertInfluencerSocialAccount = z.infer<typeof insertInfluencerSocialAccountSchema>;
