@@ -126,9 +126,9 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     }
 
     const success =
-      sbResponse?.status?.success === true || sbResponse?.status?.success === 'true';
-    if (!success) {
-      console.error('SocialBlade lookup failure', { platform, handle, status: sbResponse?.status });
+      sbResponse?.status?.success === true || sbResponse?.status?.success === 'true' || !!sbResponse?.data;
+    if (!success || !sbResponse?.data) {
+      console.error('SocialBlade lookup failure', { platform, handle, status: sbResponse?.status, dataKeys: Object.keys(sbResponse || {}) });
       const code = sbResponse?.status?.status;
       const errMsg = sbResponse?.status?.error || 'Lookup failed';
       throw new Error(code ? `${errMsg} (code ${code})` : errMsg);

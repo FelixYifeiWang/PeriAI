@@ -782,21 +782,20 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
           {Array.isArray(campaign.matchedInfluencers) && campaign.matchedInfluencers.length > 0 ? (
             <ul className="mt-2 space-y-2">
               {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string; primaryPlatform?: string; primaryFollowers?: number; primaryLikes?: number }>).map((inf, idx) => {
-                const primaryStats = inf.primaryPlatform
-                  ? `${inf.primaryPlatform}${inf.primaryFollowers ? ` • ${inf.primaryFollowers.toLocaleString()} followers` : ''}${inf.primaryLikes ? ` • ${inf.primaryLikes.toLocaleString()} likes/views` : ''}`
-                  : null;
+                const formatNum = (val?: number) => (typeof val === "number" ? val.toLocaleString() : "—");
+                const primaryLine = `Primary: ${inf.primaryPlatform ?? "—"} • ${formatNum(inf.primaryFollowers)} followers • ${formatNum(inf.primaryLikes)} likes/views`;
                 return (
                 <li key={idx} className="rounded-lg border border-muted-foreground/10 bg-white px-3 py-2">
                   <details>
                     <summary className="flex items-center justify-between gap-2 cursor-pointer select-none text-foreground">
-                      <span className="flex items-center gap-2">
-                        {inf.name || inf.username || "Unknown"}
-                        {typeof inf.score === "number" && (
-                          <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
-                        )}
-                        {primaryStats && (
-                          <span className="text-[11px] text-muted-foreground">• {primaryStats}</span>
-                        )}
+                      <span className="flex flex-col gap-0.5">
+                        <span className="flex items-center gap-2">
+                          {inf.name || inf.username || "Unknown"}
+                          {typeof inf.score === "number" && (
+                            <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
+                          )}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">{primaryLine}</span>
                       </span>
                       <span className="text-xs text-muted-foreground">Tap to view</span>
                     </summary>
