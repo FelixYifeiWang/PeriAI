@@ -783,7 +783,9 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
             <ul className="mt-2 space-y-2">
               {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string; primaryPlatform?: string; primaryFollowers?: number; primaryLikes?: number }>).map((inf, idx) => {
                 const formatNum = (val?: number) => (typeof val === "number" ? val.toLocaleString() : "—");
-                const primaryLine = `Primary: ${inf.primaryPlatform ?? "—"} • ${formatNum(inf.primaryFollowers)} followers • ${formatNum(inf.primaryLikes)} likes/views`;
+                const primaryPlatform = inf.primaryPlatform ?? "—";
+                const primaryFollowers = formatNum(inf.primaryFollowers);
+                const primaryLikes = formatNum(inf.primaryLikes);
                 return (
                 <li key={idx} className="rounded-lg border border-muted-foreground/10 bg-white px-3 py-2">
                   <details>
@@ -795,7 +797,9 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
                             <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
                           )}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">{primaryLine}</span>
+                        <span className="text-[11px] text-muted-foreground">Primary: {primaryPlatform}</span>
+                        <span className="text-[11px] text-muted-foreground">Followers: {primaryFollowers}</span>
+                        <span className="text-[11px] text-muted-foreground">Likes/Views: {primaryLikes}</span>
                       </span>
                       <span className="text-xs text-muted-foreground">Tap to view</span>
                     </summary>
