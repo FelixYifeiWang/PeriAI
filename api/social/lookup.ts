@@ -1,67 +1,80 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import SocialBlade from 'socialblade';
 import { requireAuth } from '../_lib/middleware.js';
 import { storage } from '../_lib/storage.js';
 
 type Platform = 'instagram' | 'tiktok' | 'youtube';
 
-function inferPlatform(url: string): Platform | undefined {
+function inferPlatform(urlOrHandle: string): Platform | undefined {
+  const lower = urlOrHandle.toLowerCase();
+  if (lower.includes('instagram.com')) return 'instagram';
+  if (lower.includes('tiktok.com')) return 'tiktok';
+  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
+  return undefined;
+}
+
+function extractHandle(urlOrHandle: string, platform: Platform): string | undefined {
+  // If user typed a bare handle, accept it
+  if (!urlOrHandle.includes('http')) {
+    return urlOrHandle.replace(/^@/, '').trim() || undefined;
+  }
   try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    if (host.includes('instagram.com')) return 'instagram';
-    if (host.includes('tiktok.com')) return 'tiktok';
-    if (host.includes('youtube.com') || host === 'youtu.be') return 'youtube';
+    const parsed = new URL(urlOrHandle);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    if (!parts.length) return undefined;
+    if (platform === 'instagram' || platform === 'tiktok') {
+      return parts[0]?.replace(/^@/, '');
+    }
+    if (platform === 'youtube') {
+      if (parts[0] === 'channel' || parts[0] === 'c' || parts[0] === 'user') {
+        return (parts[1] || '').replace(/^@/, '') || undefined;
+      }
+      if (parts[0].startsWith('@')) return parts[0].slice(1);
+      return parts[0];
+    }
     return undefined;
   } catch {
     return undefined;
   }
 }
 
-function buildProviderCandidates(platform: Platform, baseUrl: string) {
-  const trimmedBase = baseUrl.replace(/\/+$/, "");
-  return [
-    `${trimmedBase}/v1/${platform}/profile`,
-    `${trimmedBase}/v1/${platform}/channel`,
-    `${trimmedBase}/v1/${platform}/user`,
-    `${trimmedBase}/v1/${platform}`,
-    `${trimmedBase}/${platform}/profile`,
-    `${trimmedBase}/${platform}/channel`,
-    `${trimmedBase}/${platform}/user`,
-    `${trimmedBase}/${platform}`,
-  ];
-}
+function mapProfile(platform: Platform, raw: any) {
+  const data = raw?.data;
+  const id = data?.id;
+  const stats = data?.statistics?.total ?? {};
 
-function extractProfile(raw: any) {
-  const data = raw?.data ?? raw;
-  const handle =
-    data?.username ||
-    data?.uniqueId ||
-    data?.customUrl ||
-    data?.title ||
-    data?.handle ||
-    null;
-  const platformAccountId = data?.id || data?.channelId || data?.uid || data?.openId || null;
-  const followers =
-    data?.followers ||
-    data?.followers_count ||
-    data?.follower_count ||
-    data?.subscriberCount ||
-    data?.subscriber_count ||
-    null;
-  const likes =
-    data?.likes ||
-    data?.diggCount ||
-    data?.likes_count ||
-    data?.likeCount ||
-    data?.viewCount ||
-    null;
+  if (platform === 'youtube') {
+    return {
+      handle:
+        id?.handle ||
+        id?.cusername ||
+        id?.username ||
+        id?.display_name ||
+        null,
+      platformAccountId: id?.id || null,
+      followers: stats.subscribers ?? null,
+      likes: stats.views ?? null,
+      rawProfile: raw ?? null,
+    };
+  }
 
+  if (platform === 'tiktok') {
+    return {
+      handle: id?.username || id?.display_name || null,
+      platformAccountId: id?.id || null,
+      followers: stats.followers ?? null,
+      likes: stats.likes ?? null,
+      rawProfile: raw ?? null,
+    };
+  }
+
+  // instagram
   return {
-    handle: handle ?? null,
-    platformAccountId: platformAccountId ?? null,
-    followers: typeof followers === 'number' ? followers : followers ? Number(followers) : null,
-    likes: typeof likes === 'number' ? likes : likes ? Number(likes) : null,
-    rawProfile: data ?? raw ?? null,
+    handle: id?.username || id?.display_name || null,
+    platformAccountId: id?.id || null,
+    followers: stats.followers ?? null,
+    likes: null,
+    rawProfile: raw ?? null,
   };
 }
 
@@ -81,58 +94,35 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     return res.status(400).json({ message: 'url is required' });
   }
 
-  const platform = inferPlatform(url);
-  if (!platform) {
-    return res.status(400).json({ message: 'Unsupported platform URL' });
+  const platform = inferPlatform(url) ?? 'instagram';
+  const handle = extractHandle(url, platform);
+  if (!handle) {
+    return res.status(400).json({ message: 'Could not parse handle from URL' });
   }
 
-  const apiKey = process.env.SOCIALDATA_API_KEY;
-  const baseUrl = process.env.SOCIALDATA_BASE_URL || 'https://api.socialdata.tools';
-  if (!apiKey) {
-    return res.status(500).json({ message: 'SOCIALDATA_API_KEY is not set' });
+  const clientId = process.env.SOCIALBLADE_CLIENT_ID;
+  const accessToken = process.env.SOCIALBLADE_ACCESS_TOKEN;
+  if (!clientId || !accessToken) {
+    return res.status(500).json({ message: 'SOCIALBLADE_CLIENT_ID and SOCIALBLADE_ACCESS_TOKEN are required' });
   }
 
   try {
-    const candidates = buildProviderCandidates(platform, baseUrl);
-    let body: any;
-    let lastError: unknown;
-    let gotResult = false;
+    const client = new SocialBlade(clientId, accessToken);
+    let sbResponse: any;
 
-    for (const candidate of candidates) {
-      const params = new URLSearchParams({
-        url,
-        link: url,
-        apikey: apiKey,
-        key: apiKey,
-      });
-      const endpointUrl = `${candidate}?${params.toString()}`;
-      try {
-        const resp = await fetch(endpointUrl, { headers: { Accept: 'application/json' } });
-        if (!resp.ok) {
-          if (resp.status === 404) {
-            lastError = await resp.text();
-            continue;
-          }
-          const text = await resp.text();
-          throw new Error(`Lookup failed (${resp.status}): ${text}`);
-        }
-        body = await resp.json();
-        gotResult = true;
-        break;
-      } catch (err) {
-        lastError = err;
-      }
+    if (platform === 'youtube') {
+      sbResponse = await client.youtube.user(handle);
+    } else if (platform === 'tiktok') {
+      sbResponse = await client.tiktok.user(handle);
+    } else {
+      sbResponse = await client.instagram.user(handle);
     }
 
-    if (!gotResult) {
-      throw new Error(
-        typeof lastError === 'string'
-          ? lastError
-          : (lastError as Error)?.message || 'Lookup failed for all endpoints',
-      );
+    if (!sbResponse?.status?.success) {
+      throw new Error(sbResponse?.status?.error || 'Lookup failed');
     }
 
-    const profile = extractProfile(body);
+    const profile = mapProfile(platform, sbResponse);
 
     const saved = await storage.upsertSocialAccount({
       userId: user.id,
