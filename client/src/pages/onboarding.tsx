@@ -561,42 +561,33 @@ useEffect(() => {
                 {copy.steps.socials.description}
               </p>
             </div>
-            <div className="w-full max-w-lg space-y-5 text-left">
+            <div className="w-full max-w-lg space-y-4 text-left">
               {(["instagram", "tiktok", "youtube"] as const).map((platform) => {
                 const account = getAccount(platform);
                 return (
-                  <div key={platform} className="space-y-2 rounded-3xl bg-white/80 p-4 shadow-sm">
+                  <div key={platform} className="space-y-2 rounded-3xl bg-white/90 p-4 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="space-y-1">
                         <p className="text-sm uppercase tracking-wide text-slate-500">{platform}</p>
-                        {account?.handle && (
-                          <p className="text-sm text-slate-700">@{account.handle}</p>
-                        )}
+                        <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+                          <span>Handle: {account?.handle ? `@${account.handle}` : "—"}</span>
+                          <span>Followers: {account?.followers ?? "—"}</span>
+                          <span>Likes/Views: {account?.likes ?? "—"}</span>
+                          {account?.lastSyncedAt && (
+                            <span>Updated: {new Date(account.lastSyncedAt).toLocaleString()}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fetchStats(platform)}
-                          disabled={lookupSocial.isPending}
-                        >
-                          {account ? "Refresh" : "Fetch"}
-                        </Button>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchStats(platform)}
+                        disabled={lookupSocial.isPending}
+                      >
+                        {account ? "Refresh" : "Fetch"}
+                      </Button>
                     </div>
-                    {account && (
-                      <div className="flex gap-4 text-xs text-slate-600">
-                        <span>Followers: {account.followers ?? "—"}</span>
-                        <span>Likes/Views: {account.likes ?? "—"}</span>
-                        {account.lastSyncedAt && (
-                          <span>Last synced: {new Date(account.lastSyncedAt).toLocaleString()}</span>
-                        )}
-                      </div>
-                    )}
-                    <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-wide text-slate-500">
-                        Profile link (optional)
-                      </label>
+                    <div className="flex gap-2">
                       <input
                         value={socialLinks[platform] ?? ""}
                         onChange={(event) =>
@@ -605,9 +596,17 @@ useEffect(() => {
                             [platform]: event.target.value,
                           }))
                         }
-                        className="w-full rounded-3xl border border-transparent bg-white px-4 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+                        className="flex-1 rounded-2xl border border-transparent bg-white px-4 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
                         placeholder={copy.steps.socials.placeholders[platform]}
                       />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => fetchStats(platform)}
+                        disabled={lookupSocial.isPending}
+                      >
+                        {account ? "Refresh" : "Fetch"}
+                      </Button>
                     </div>
                   </div>
                 );

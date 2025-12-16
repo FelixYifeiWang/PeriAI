@@ -709,47 +709,50 @@ export default function InfluencerSetup() {
                               )}
                           {account && (
                             <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                              <span>Followers: {account.followers ?? "—"}</span>
-                              <span>Likes/Views: {account.likes ?? "—"}</span>
+                                  <span>Followers: {account.followers ?? "—"}</span>
+                                  <span>Likes/Views: {account.likes ?? "—"}</span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => fetchStats(platform)}
-                                disabled={syncSocial.isPending}
-                              >
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => fetchStats(platform)} disabled={syncSocial.isPending}>
                                 {account ? "Refresh" : "Fetch"}
                               </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                  </div>
-                  {(["instagram", "tiktok", "youtube"] as const).map((platform) => (
-                    <FormField
-                      key={platform}
-                      control={form.control}
-                      name={`socialLinks.${platform}` as const}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs uppercase tracking-wide text-muted-foreground">
-                            {platform}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={copy.aiInstructions.socialPlaceholders[platform]}
-                              {...field}
+                            </div>
+                          </div>
+                          <div className="mt-2 flex gap-2">
+                            <FormField
+                              control={form.control}
+                              name={`socialLinks.${platform}` as const}
+                              render={({ field }) => (
+                                <FormItem className="flex-1">
+                                  <FormLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    Profile link
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder={copy.aiInstructions.socialPlaceholders[platform]}
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ))}
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="self-end"
+                              onClick={() => fetchStats(platform)}
+                              disabled={syncSocial.isPending}
+                            >
+                              {account ? "Refresh" : "Fetch"}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-2">
