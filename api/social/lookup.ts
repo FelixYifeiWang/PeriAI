@@ -17,16 +17,14 @@ function inferPlatform(url: string): Platform | undefined {
   }
 }
 
-function buildProviderUrl(platform: Platform, url: string, apiKey: string, baseUrl: string) {
-  // Provider endpoints are expected to accept ?url and ?apikey
-  switch (platform) {
-    case 'instagram':
-      return `${baseUrl}/instagram/profile?url=${encodeURIComponent(url)}&apikey=${encodeURIComponent(apiKey)}`;
-    case 'tiktok':
-      return `${baseUrl}/tiktok/profile?url=${encodeURIComponent(url)}&apikey=${encodeURIComponent(apiKey)}`;
-    case 'youtube':
-      return `${baseUrl}/youtube/channel?url=${encodeURIComponent(url)}&apikey=${encodeURIComponent(apiKey)}`;
-  }
+function buildProviderCandidates(platform: Platform, baseUrl: string) {
+  const trimmedBase = baseUrl.replace(/\/+$/, "");
+  return [
+    `${trimmedBase}/v1/${platform}/profile`,
+    `${trimmedBase}/v1/${platform}`,
+    `${trimmedBase}/${platform}/profile`,
+    `${trimmedBase}/${platform}`,
+  ];
 }
 
 function extractProfile(raw: any) {
@@ -91,13 +89,43 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
-    const endpoint = buildProviderUrl(platform, url, apiKey, baseUrl);
-    const resp = await fetch(endpoint, { headers: { Accept: 'application/json' } });
-    if (!resp.ok) {
-      const text = await resp.text();
-      throw new Error(`Lookup failed (${resp.status}): ${text}`);
+    const candidates = buildProviderCandidates(platform, baseUrl);
+    let body: any;
+    let lastError: unknown;
+    let gotResult = false;
+
+    for (const candidate of candidates) {
+      const endpointUrl = `${candidate}?${new URLSearchParams({
+        url,
+        link: url,
+        apikey: apiKey,
+      }).toString()}`;
+      try {
+        const resp = await fetch(endpointUrl, { headers: { Accept: 'application/json' } });
+        if (!resp.ok) {
+          if (resp.status === 404) {
+            lastError = await resp.text();
+            continue;
+          }
+          const text = await resp.text();
+          throw new Error(`Lookup failed (${resp.status}): ${text}`);
+        }
+        body = await resp.json();
+        gotResult = true;
+        break;
+      } catch (err) {
+        lastError = err;
+      }
     }
-    const body = await resp.json();
+
+    if (!gotResult) {
+      throw new Error(
+        typeof lastError === 'string'
+          ? lastError
+          : (lastError as Error)?.message || 'Lookup failed for all endpoints',
+      );
+    }
+
     const profile = extractProfile(body);
 
     const saved = await storage.upsertSocialAccount({

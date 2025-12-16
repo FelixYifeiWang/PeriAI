@@ -707,17 +707,12 @@ export default function InfluencerSetup() {
                               {account?.handle && (
                                 <p className="text-sm text-foreground">@{account.handle}</p>
                               )}
-                          {account && (
-                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                              {account && (
+                                <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
                                   <span>Followers: {account.followers ?? "—"}</span>
                                   <span>Likes/Views: {account.likes ?? "—"}</span>
                                 </div>
                               )}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm" onClick={() => fetchStats(platform)} disabled={syncSocial.isPending}>
-                                {account ? "Refresh" : "Fetch"}
-                              </Button>
                             </div>
                           </div>
                           <div className="mt-2 flex gap-2">

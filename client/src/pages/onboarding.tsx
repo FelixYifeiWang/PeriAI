@@ -578,14 +578,6 @@ useEffect(() => {
                           )}
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fetchStats(platform)}
-                        disabled={lookupSocial.isPending}
-                      >
-                        {account ? "Refresh" : "Fetch"}
-                      </Button>
                     </div>
                     <div className="flex gap-2">
                       <input
