@@ -368,6 +368,7 @@ export class DatabaseStorage implements IStorage {
         ...account,
         followers: sanitizedFollowers,
         likes: sanitizedLikes,
+        lastSyncedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: [influencerSocialAccounts.userId, influencerSocialAccounts.platform],

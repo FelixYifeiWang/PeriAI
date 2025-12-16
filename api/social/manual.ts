@@ -46,7 +46,6 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
       accessToken: null,
       refreshToken: null,
       expiresAt: null,
-      lastSyncedAt: new Date(),
     });
 
     res.json({
