@@ -149,7 +149,6 @@ export const insertInfluencerSocialAccountSchema = createInsertSchema(influencer
   id: true,
   createdAt: true,
   updatedAt: true,
-  lastSyncedAt: true,
 });
 
 export type InsertInfluencerSocialAccount = z.infer<typeof insertInfluencerSocialAccountSchema>;
