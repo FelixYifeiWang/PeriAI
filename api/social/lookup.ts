@@ -7,6 +7,7 @@ type Platform = 'instagram' | 'tiktok' | 'youtube';
 
 function inferPlatform(urlOrHandle: string): Platform | undefined {
   const lower = urlOrHandle.toLowerCase();
+  if (lower.startsWith('@')) return 'youtube';
   if (lower.includes('instagram.com')) return 'instagram';
   if (lower.includes('tiktok.com')) return 'tiktok';
   if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
@@ -16,7 +17,8 @@ function inferPlatform(urlOrHandle: string): Platform | undefined {
 function extractHandle(urlOrHandle: string, platform: Platform): string | undefined {
   // If user typed a bare handle, accept it
   if (!urlOrHandle.includes('http')) {
-    return urlOrHandle.replace(/^@/, '').trim() || undefined;
+    const cleaned = urlOrHandle.replace(/^@+/, '').trim();
+    return cleaned || undefined;
   }
   try {
     const parsed = new URL(urlOrHandle);
