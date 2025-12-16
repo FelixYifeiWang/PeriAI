@@ -238,6 +238,11 @@ export default function OnboardingPage() {
     tiktok: "",
     youtube: "",
   });
+  const [manualStats, setManualStats] = useState<Record<"instagram" | "tiktok" | "youtube", { handle: string; followers: string; likes: string }>>({
+    instagram: { handle: "", followers: "", likes: "" },
+    tiktok: { handle: "", followers: "", likes: "" },
+    youtube: { handle: "", followers: "", likes: "" },
+  });
   const [error, setError] = useState<string | null>(null);
 
   const { data: preferences, isLoading: preferencesLoading } =
@@ -426,13 +431,14 @@ useEffect(() => {
       return;
     }
 
-    if (!monetaryBaseline) {
-      setError(copy.errors.monetaryMissing);
-      setStepIndex(0);
-      return;
-    }
+  if (!monetaryBaseline) {
+    setError(copy.errors.monetaryMissing);
+    setStepIndex(0);
+    return;
+  }
 
-    savePreferences.mutate({
+  savePreferences
+    .mutateAsync({
       personalContentPreferences: trimmedPreferences,
       monetaryBaseline,
       contentLength: contentLength as ContentLength,
@@ -440,8 +446,41 @@ useEffect(() => {
       socialLinks: Object.fromEntries(
         Object.entries(socialLinks).filter(([, value]) => value && value.trim().length > 0),
       ),
+    })
+    .then(async () => {
+      const tasks: Array<Promise<unknown>> = [];
+      (["instagram", "tiktok", "youtube"] as const).forEach((platform) => {
+        const entry = manualStats[platform];
+        const hasManual =
+          (entry.handle && entry.handle.trim()) ||
+          (entry.followers && entry.followers.trim()) ||
+          (entry.likes && entry.likes.trim());
+        if (hasManual) {
+          tasks.push(
+            manualSocial.mutateAsync({
+              platform,
+              handle: entry.handle?.trim() || "manual",
+              followers: entry.followers ? Number(entry.followers.replace(/,/g, "")) || 0 : undefined,
+              likes: entry.likes ? Number(entry.likes.replace(/,/g, "")) || 0 : undefined,
+              url: socialLinks[platform] || undefined,
+            }),
+          );
+        }
+      });
+      if (tasks.length) {
+        await Promise.allSettled(tasks);
+      }
+      setLocation("/influencer");
+    })
+    .catch((err) => {
+      const message = err instanceof Error ? err.message : copy.toast.errorDescription;
+      toast({
+        title: copy.toast.errorTitle,
+        description: message,
+        variant: "destructive",
+      });
     });
-  };
+};
 
   const getAccount = (platform: "instagram" | "tiktok" | "youtube") =>
     (socialAccounts || []).find((acc) => acc.platform === platform);
@@ -628,52 +667,39 @@ useEffect(() => {
                       </div>
                       <div className="flex gap-2">
                         <input
+                          value={manualStats[platform].handle}
+                          onChange={(e) =>
+                            setManualStats((prev) => ({
+                              ...prev,
+                              [platform]: { ...prev[platform], handle: e.target.value },
+                            }))
+                          }
                           className="flex-1 rounded-2xl border border-transparent bg-white px-3 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
                           placeholder="Handle (optional)"
-                          onBlur={(e) => {
-                            if (e.target.value) {
-                              manualSocial.mutate({
-                                platform,
-                                handle: e.target.value.trim(),
-                                url: socialLinks[platform] || undefined,
-                              });
-                              e.target.value = "";
-                            }
-                          }}
                         />
                         <input
+                          value={manualStats[platform].followers}
+                          onChange={(e) =>
+                            setManualStats((prev) => ({
+                              ...prev,
+                              [platform]: { ...prev[platform], followers: e.target.value },
+                            }))
+                          }
                           className="w-32 rounded-2xl border border-transparent bg-white px-3 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
                           placeholder="Followers"
                           inputMode="numeric"
-                          onBlur={(e) => {
-                            const val = e.target.value.trim();
-                            if (val) {
-                              manualSocial.mutate({
-                                platform,
-                                handle: account?.handle || "manual",
-                                followers: Number(val.replace(/,/g, "")) || 0,
-                                url: socialLinks[platform] || undefined,
-                              });
-                              e.target.value = "";
-                            }
-                          }}
                         />
                         <input
+                          value={manualStats[platform].likes}
+                          onChange={(e) =>
+                            setManualStats((prev) => ({
+                              ...prev,
+                              [platform]: { ...prev[platform], likes: e.target.value },
+                            }))
+                          }
                           className="w-32 rounded-2xl border border-transparent bg-white px-3 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
                           placeholder="Likes/Views"
                           inputMode="numeric"
-                          onBlur={(e) => {
-                            const val = e.target.value.trim();
-                            if (val) {
-                              manualSocial.mutate({
-                                platform,
-                                handle: account?.handle || "manual",
-                                likes: Number(val.replace(/,/g, "")) || 0,
-                                url: socialLinks[platform] || undefined,
-                              });
-                              e.target.value = "";
-                            }
-                          }}
                         />
                       </div>
                     </div>

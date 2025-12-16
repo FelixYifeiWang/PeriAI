@@ -289,6 +289,12 @@ export default function InfluencerSetup() {
     staleTime: 30_000,
   });
 
+  const [manualStats, setManualStats] = useState<Record<"instagram" | "tiktok" | "youtube", { handle: string; followers: string; likes: string }>>({
+    instagram: { handle: "", followers: "", likes: "" },
+    tiktok: { handle: "", followers: "", likes: "" },
+    youtube: { handle: "", followers: "", likes: "" },
+  });
+
   const defaultValues = useMemo<PreferencesFormData>(
     () => ({
       personalContentPreferences: copy.defaultTemplate,
@@ -469,6 +475,36 @@ export default function InfluencerSetup() {
     syncSocial.mutate({ platform, url: url.trim() });
   };
 
+  const handleSavePreferences = async (data: PreferencesFormData) => {
+    try {
+      await saveMutation.mutateAsync(data);
+      const tasks: Array<Promise<unknown>> = [];
+      (["instagram", "tiktok", "youtube"] as const).forEach((platform) => {
+        const entry = manualStats[platform];
+        const hasManual =
+          (entry.handle && entry.handle.trim()) ||
+          (entry.followers && entry.followers.trim()) ||
+          (entry.likes && entry.likes.trim());
+        if (hasManual) {
+          tasks.push(
+            manualSocial.mutateAsync({
+              platform,
+              handle: entry.handle?.trim() || getAccount(platform)?.handle || "manual",
+              followers: entry.followers ? Number(entry.followers.replace(/,/g, "")) || 0 : undefined,
+              likes: entry.likes ? Number(entry.likes.replace(/,/g, "")) || 0 : undefined,
+              url: data.socialLinks?.[platform] || undefined,
+            }),
+          );
+        }
+      });
+      if (tasks.length) {
+        await Promise.allSettled(tasks);
+      }
+    } catch {
+      // errors handled by saveMutation onError
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
@@ -634,7 +670,7 @@ export default function InfluencerSetup() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-6">
+              <form onSubmit={form.handleSubmit((data) => handleSavePreferences(data))} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="personalContentPreferences"
@@ -773,51 +809,37 @@ export default function InfluencerSetup() {
                             <Input
                               placeholder="Handle"
                               className="flex-1 min-w-[140px]"
-                              onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val) {
-                                  manualSocial.mutate({
-                                    platform,
-                                    handle: val,
-                                    url: form.getValues()?.socialLinks?.[platform] || undefined,
-                                  });
-                                  e.target.value = "";
-                                }
-                              }}
+                              value={manualStats[platform].handle}
+                              onChange={(e) =>
+                                setManualStats((prev) => ({
+                                  ...prev,
+                                  [platform]: { ...prev[platform], handle: e.target.value },
+                                }))
+                              }
                             />
                             <Input
                               placeholder="Followers"
                               className="w-32"
                               inputMode="numeric"
-                              onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val) {
-                                  manualSocial.mutate({
-                                    platform,
-                                    handle: getAccount(platform)?.handle || "manual",
-                                    followers: Number(val.replace(/,/g, "")) || 0,
-                                    url: form.getValues()?.socialLinks?.[platform] || undefined,
-                                  });
-                                  e.target.value = "";
-                                }
-                              }}
+                              value={manualStats[platform].followers}
+                              onChange={(e) =>
+                                setManualStats((prev) => ({
+                                  ...prev,
+                                  [platform]: { ...prev[platform], followers: e.target.value },
+                                }))
+                              }
                             />
                             <Input
                               placeholder="Likes/Views"
                               className="w-32"
                               inputMode="numeric"
-                              onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val) {
-                                  manualSocial.mutate({
-                                    platform,
-                                    handle: getAccount(platform)?.handle || "manual",
-                                    likes: Number(val.replace(/,/g, "")) || 0,
-                                    url: form.getValues()?.socialLinks?.[platform] || undefined,
-                                  });
-                                  e.target.value = "";
-                                }
-                              }}
+                              value={manualStats[platform].likes}
+                              onChange={(e) =>
+                                setManualStats((prev) => ({
+                                  ...prev,
+                                  [platform]: { ...prev[platform], likes: e.target.value },
+                                }))
+                              }
                             />
                           </div>
                         </div>
