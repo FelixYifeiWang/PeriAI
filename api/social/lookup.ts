@@ -21,8 +21,12 @@ function buildProviderCandidates(platform: Platform, baseUrl: string) {
   const trimmedBase = baseUrl.replace(/\/+$/, "");
   return [
     `${trimmedBase}/v1/${platform}/profile`,
+    `${trimmedBase}/v1/${platform}/channel`,
+    `${trimmedBase}/v1/${platform}/user`,
     `${trimmedBase}/v1/${platform}`,
     `${trimmedBase}/${platform}/profile`,
+    `${trimmedBase}/${platform}/channel`,
+    `${trimmedBase}/${platform}/user`,
     `${trimmedBase}/${platform}`,
   ];
 }
@@ -95,11 +99,13 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     let gotResult = false;
 
     for (const candidate of candidates) {
-      const endpointUrl = `${candidate}?${new URLSearchParams({
+      const params = new URLSearchParams({
         url,
         link: url,
         apikey: apiKey,
-      }).toString()}`;
+        key: apiKey,
+      });
+      const endpointUrl = `${candidate}?${params.toString()}`;
       try {
         const resp = await fetch(endpointUrl, { headers: { Accept: 'application/json' } });
         if (!resp.ok) {
