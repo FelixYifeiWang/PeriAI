@@ -781,7 +781,11 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
           <summary className="cursor-pointer select-none text-foreground font-medium">Found influencers</summary>
           {Array.isArray(campaign.matchedInfluencers) && campaign.matchedInfluencers.length > 0 ? (
             <ul className="mt-2 space-y-2">
-              {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string }>).map((inf, idx) => (
+              {(campaign.matchedInfluencers as Array<{ name?: string; username?: string; email?: string; preferences?: string; score?: number; reason?: string; primaryPlatform?: string; primaryFollowers?: number; primaryLikes?: number }>).map((inf, idx) => {
+                const primaryStats = inf.primaryPlatform
+                  ? `${inf.primaryPlatform}${inf.primaryFollowers ? ` • ${inf.primaryFollowers.toLocaleString()} followers` : ''}${inf.primaryLikes ? ` • ${inf.primaryLikes.toLocaleString()} likes/views` : ''}`
+                  : null;
+                return (
                 <li key={idx} className="rounded-lg border border-muted-foreground/10 bg-white px-3 py-2">
                   <details>
                     <summary className="flex items-center justify-between gap-2 cursor-pointer select-none text-foreground">
@@ -789,6 +793,9 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
                         {inf.name || inf.username || "Unknown"}
                         {typeof inf.score === "number" && (
                           <span className="text-[11px] text-muted-foreground">({Math.round((inf.score || 0) * 100)}%)</span>
+                        )}
+                        {primaryStats && (
+                          <span className="text-[11px] text-muted-foreground">• {primaryStats}</span>
                         )}
                       </span>
                       <span className="text-xs text-muted-foreground">Tap to view</span>
@@ -800,7 +807,8 @@ function CampaignStatusList({ campaigns, onRefetch }: { campaigns: Campaign[]; o
                     </div>
                   </details>
                 </li>
-              ))}
+              );
+            })}
             </ul>
           ) : (
             <div className="mt-2">Pending results</div>

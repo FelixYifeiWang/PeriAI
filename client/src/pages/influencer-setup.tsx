@@ -432,6 +432,31 @@ export default function InfluencerSetup() {
     },
   });
 
+  const manualSocial = useMutation({
+    mutationFn: async (payload: {
+      platform: "instagram" | "tiktok" | "youtube";
+      handle: string;
+      followers?: number | null;
+      likes?: number | null;
+      url?: string | null;
+    }) => {
+      const res = await fetch("/api/social/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message || "Failed to save profile");
+      }
+      return res.json() as Promise<InfluencerSocialAccount>;
+    },
+    onSuccess: () => {
+      refetchSocialAccounts();
+    },
+  });
+
   const getAccount = (platform: "instagram" | "tiktok" | "youtube") =>
     (socialAccounts || []).find((acc) => acc.platform === platform);
 
@@ -743,6 +768,57 @@ export default function InfluencerSetup() {
                             >
                               {account ? "Refresh" : "Fetch"}
                             </Button>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Input
+                              placeholder="Handle"
+                              className="flex-1 min-w-[140px]"
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val) {
+                                  manualSocial.mutate({
+                                    platform,
+                                    handle: val,
+                                    url: form.getValues()?.socialLinks?.[platform] || undefined,
+                                  });
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                            <Input
+                              placeholder="Followers"
+                              className="w-32"
+                              inputMode="numeric"
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val) {
+                                  manualSocial.mutate({
+                                    platform,
+                                    handle: getAccount(platform)?.handle || "manual",
+                                    followers: Number(val.replace(/,/g, "")) || 0,
+                                    url: form.getValues()?.socialLinks?.[platform] || undefined,
+                                  });
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                            <Input
+                              placeholder="Likes/Views"
+                              className="w-32"
+                              inputMode="numeric"
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val) {
+                                  manualSocial.mutate({
+                                    platform,
+                                    handle: getAccount(platform)?.handle || "manual",
+                                    likes: Number(val.replace(/,/g, "")) || 0,
+                                    url: form.getValues()?.socialLinks?.[platform] || undefined,
+                                  });
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
                           </div>
                         </div>
                       );

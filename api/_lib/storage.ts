@@ -355,7 +355,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(influencerSocialAccounts)
       .where(eq(influencerSocialAccounts.userId, userId))
-      .orderBy(influencerSocialAccounts.platform);
+      .orderBy(desc(influencerSocialAccounts.isPrimary), desc(influencerSocialAccounts.followers), influencerSocialAccounts.platform);
   }
 
   async upsertSocialAccount(account: InsertInfluencerSocialAccount): Promise<InfluencerSocialAccount> {
@@ -370,6 +370,7 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+    await this.setPrimarySocialAccount(account.userId);
     return result;
   }
 
@@ -382,6 +383,7 @@ export class DatabaseStorage implements IStorage {
           eq(influencerSocialAccounts.platform, platform),
         ),
       );
+    await this.setPrimarySocialAccount(userId);
   }
 
   async touchSocialAccountSync(
@@ -403,7 +405,41 @@ export class DatabaseStorage implements IStorage {
         ),
       )
       .returning();
+    await this.setPrimarySocialAccount(userId);
     return result;
+  }
+
+  private async setPrimarySocialAccount(userId: string): Promise<void> {
+    const accounts = await db
+      .select()
+      .from(influencerSocialAccounts)
+      .where(eq(influencerSocialAccounts.userId, userId));
+
+    if (!accounts.length) return;
+
+    const sorted = [...accounts].sort((a, b) => {
+      const af = a.followers ?? -1;
+      const bf = b.followers ?? -1;
+      return bf - af;
+    });
+    const primaryPlatform = sorted[0]?.platform;
+
+    await db
+      .update(influencerSocialAccounts)
+      .set({ isPrimary: false, updatedAt: new Date() })
+      .where(eq(influencerSocialAccounts.userId, userId));
+
+    if (primaryPlatform) {
+      await db
+        .update(influencerSocialAccounts)
+        .set({ isPrimary: true, updatedAt: new Date() })
+        .where(
+          and(
+            eq(influencerSocialAccounts.userId, userId),
+            eq(influencerSocialAccounts.platform, primaryPlatform),
+          ),
+        );
+    }
   }
 }
 

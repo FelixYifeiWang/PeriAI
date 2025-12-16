@@ -89,12 +89,19 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
     return res.status(403).json({ message: 'Influencer access required' });
   }
 
-  const { url } = req.body ?? {};
+  const { url, platform: rawPlatform } = req.body ?? {};
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ message: 'url is required' });
   }
 
-  const platform = inferPlatform(url) ?? 'instagram';
+  const platformParam =
+    rawPlatform === 'instagram' || rawPlatform === 'tiktok' || rawPlatform === 'youtube'
+      ? rawPlatform
+      : undefined;
+  const platform = platformParam ?? inferPlatform(url);
+  if (!platform) {
+    return res.status(400).json({ message: 'Unsupported platform URL. Please include full profile link.' });
+  }
   const handle = extractHandle(url, platform);
   if (!handle) {
     return res.status(400).json({ message: 'Could not parse handle from URL' });
@@ -118,8 +125,13 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
       sbResponse = await client.instagram.user(handle);
     }
 
-    if (!sbResponse?.status?.success) {
-      throw new Error(sbResponse?.status?.error || 'Lookup failed');
+    const success =
+      sbResponse?.status?.success === true || sbResponse?.status?.success === 'true';
+    if (!success) {
+      console.error('SocialBlade lookup failure', { platform, handle, status: sbResponse?.status });
+      const code = sbResponse?.status?.status;
+      const errMsg = sbResponse?.status?.error || 'Lookup failed';
+      throw new Error(code ? `${errMsg} (code ${code})` : errMsg);
     }
 
     const profile = mapProfile(platform, sbResponse);

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { requireAuth } from '../../_lib/middleware.js';
 import { storage } from '../../_lib/storage.js';
-import { users, influencerPreferences, type Campaign } from '../../../shared/schema.js';
+import { users, influencerPreferences, influencerSocialAccounts, type Campaign } from '../../../shared/schema.js';
 import { db } from '../../_lib/db.js';
 import { desc, eq, and } from 'drizzle-orm';
 
@@ -108,9 +108,19 @@ async function findInfluencers(filters: Filter | null) {
         lastName: users.lastName,
         preferences: influencerPreferences.personalContentPreferences,
         baseline: influencerPreferences.monetaryBaseline,
+        primaryPlatform: influencerSocialAccounts.platform,
+        primaryFollowers: influencerSocialAccounts.followers,
+        primaryLikes: influencerSocialAccounts.likes,
       })
       .from(users)
       .leftJoin(influencerPreferences, eq(users.id, influencerPreferences.userId))
+      .leftJoin(
+        influencerSocialAccounts,
+        and(
+          eq(influencerSocialAccounts.userId, users.id),
+          eq(influencerSocialAccounts.isPrimary, true),
+        ),
+      )
       .where(whereClause)
       .orderBy(desc(users.createdAt))
       .limit(10);
@@ -128,6 +138,9 @@ async function findInfluencers(filters: Filter | null) {
       email: r.email ?? undefined,
       name: [r.firstName, r.lastName].filter(Boolean).join(' ') || r.username || undefined,
       preferences: r.preferences ?? undefined,
+      primaryPlatform: r.primaryPlatform ?? undefined,
+      primaryFollowers: r.primaryFollowers ?? undefined,
+      primaryLikes: r.primaryLikes ?? undefined,
     }));
   } catch (error) {
     console.error('Error fetching influencers:', error);

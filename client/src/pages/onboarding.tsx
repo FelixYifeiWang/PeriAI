@@ -348,6 +348,31 @@ useEffect(() => {
     },
   });
 
+  const manualSocial = useMutation({
+    mutationFn: async (payload: {
+      platform: "instagram" | "tiktok" | "youtube";
+      handle: string;
+      followers?: number | null;
+      likes?: number | null;
+      url?: string | null;
+    }) => {
+      const res = await fetch("/api/social/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error((errBody as { message?: string }).message || "Failed to save profile");
+      }
+      return res.json() as Promise<InfluencerSocialAccount>;
+    },
+    onSuccess: () => {
+      refetchSocialAccounts();
+    },
+  });
+
   if (isLoading || (isAuthenticated && preferencesLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -579,26 +604,78 @@ useEffect(() => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <input
-                        value={socialLinks[platform] ?? ""}
-                        onChange={(event) =>
-                          setSocialLinks((prev) => ({
-                            ...prev,
-                            [platform]: event.target.value,
-                          }))
-                        }
-                        className="flex-1 rounded-2xl border border-transparent bg-white px-4 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
-                        placeholder={copy.steps.socials.placeholders[platform]}
-                      />
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => fetchStats(platform)}
-                        disabled={lookupSocial.isPending}
-                      >
-                        {account ? "Refresh" : "Fetch"}
-                      </Button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <input
+                          value={socialLinks[platform] ?? ""}
+                          onChange={(event) =>
+                            setSocialLinks((prev) => ({
+                              ...prev,
+                              [platform]: event.target.value,
+                            }))
+                          }
+                          className="flex-1 rounded-2xl border border-transparent bg-white px-4 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+                          placeholder={copy.steps.socials.placeholders[platform]}
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => fetchStats(platform)}
+                          disabled={lookupSocial.isPending}
+                        >
+                          {account ? "Refresh" : "Fetch"}
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          className="flex-1 rounded-2xl border border-transparent bg-white px-3 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+                          placeholder="Handle (optional)"
+                          onBlur={(e) => {
+                            if (e.target.value) {
+                              manualSocial.mutate({
+                                platform,
+                                handle: e.target.value.trim(),
+                                url: socialLinks[platform] || undefined,
+                              });
+                              e.target.value = "";
+                            }
+                          }}
+                        />
+                        <input
+                          className="w-32 rounded-2xl border border-transparent bg-white px-3 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+                          placeholder="Followers"
+                          inputMode="numeric"
+                          onBlur={(e) => {
+                            const val = e.target.value.trim();
+                            if (val) {
+                              manualSocial.mutate({
+                                platform,
+                                handle: account?.handle || "manual",
+                                followers: Number(val.replace(/,/g, "")) || 0,
+                                url: socialLinks[platform] || undefined,
+                              });
+                              e.target.value = "";
+                            }
+                          }}
+                        />
+                        <input
+                          className="w-32 rounded-2xl border border-transparent bg-white px-3 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+                          placeholder="Likes/Views"
+                          inputMode="numeric"
+                          onBlur={(e) => {
+                            const val = e.target.value.trim();
+                            if (val) {
+                              manualSocial.mutate({
+                                platform,
+                                handle: account?.handle || "manual",
+                                likes: Number(val.replace(/,/g, "")) || 0,
+                                url: socialLinks[platform] || undefined,
+                              });
+                              e.target.value = "";
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 );

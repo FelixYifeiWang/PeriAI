@@ -139,6 +139,7 @@ export const influencerSocialAccounts = pgTable("influencer_social_accounts", {
   refreshToken: text("refresh_token"),
   expiresAt: timestamp("expires_at"),
   lastSyncedAt: timestamp("last_synced_at"),
+  isPrimary: boolean("is_primary").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
