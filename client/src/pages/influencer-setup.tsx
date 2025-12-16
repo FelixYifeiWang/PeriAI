@@ -414,16 +414,16 @@ export default function InfluencerSetup() {
   });
 
   const syncSocial = useMutation({
-    mutationFn: async (platform: "instagram" | "tiktok" | "youtube") => {
-      const res = await fetch("/api/social/sync", {
+    mutationFn: async ({ platform, url }: { platform: "instagram" | "tiktok" | "youtube"; url: string }) => {
+      const res = await fetch("/api/social/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ platform }),
+        body: JSON.stringify({ url }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as { message?: string }).message || "Failed to sync account");
+        throw new Error((err as { message?: string }).message || "Failed to fetch profile");
       }
       return res.json() as Promise<InfluencerSocialAccount>;
     },
@@ -435,8 +435,13 @@ export default function InfluencerSetup() {
   const getAccount = (platform: "instagram" | "tiktok" | "youtube") =>
     (socialAccounts || []).find((acc) => acc.platform === platform);
 
-  const startConnect = (platform: "instagram" | "tiktok" | "youtube") => {
-    window.location.href = `/api/social/connect?platform=${platform}`;
+  const fetchStats = (platform: "instagram" | "tiktok" | "youtube") => {
+    const url = form.getValues()?.socialLinks?.[platform];
+    if (!url || !url.trim()) {
+      toast({ title: copy.toast.usernameError.title, description: "Please enter a profile link first.", variant: "destructive" });
+      return;
+    }
+    syncSocial.mutate({ platform, url: url.trim() });
   };
 
   const handleLogout = async () => {
@@ -702,32 +707,27 @@ export default function InfluencerSetup() {
                               {account?.handle && (
                                 <p className="text-sm text-foreground">@{account.handle}</p>
                               )}
-                              {account && (
-                                <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                  <span>Followers: {account.followers ?? "—"}</span>
-                                  <span>Likes/Views: {account.likes ?? "—"}</span>
-                                </div>
-                              )}
+                          {account && (
+                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                              <span>Followers: {account.followers ?? "—"}</span>
+                              <span>Likes/Views: {account.likes ?? "—"}</span>
                             </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm" onClick={() => startConnect(platform)}>
-                                {account ? "Reconnect" : "Connect"}
-                              </Button>
-                              {account && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => syncSocial.mutate(platform)}
-                                  disabled={syncSocial.isPending}
-                                >
-                                  Refresh
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          )}
                         </div>
-                      );
-                    })}
+                        <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => fetchStats(platform)}
+                                disabled={syncSocial.isPending}
+                              >
+                                {account ? "Refresh" : "Fetch"}
+                              </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
                   </div>
                   {(["instagram", "tiktok", "youtube"] as const).map((platform) => (
                     <FormField

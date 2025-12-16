@@ -329,17 +329,17 @@ useEffect(() => {
     },
   });
 
-  const syncSocial = useMutation({
-    mutationFn: async (platform: "instagram" | "tiktok" | "youtube") => {
-      const res = await fetch("/api/social/sync", {
+  const lookupSocial = useMutation({
+    mutationFn: async ({ platform, url }: { platform: "instagram" | "tiktok" | "youtube"; url: string }) => {
+      const res = await fetch("/api/social/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ platform }),
+        body: JSON.stringify({ url }),
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        throw new Error((errBody as { message?: string }).message || "Failed to sync account");
+        throw new Error((errBody as { message?: string }).message || "Failed to fetch profile");
       }
       return res.json() as Promise<InfluencerSocialAccount>;
     },
@@ -421,8 +421,13 @@ useEffect(() => {
   const getAccount = (platform: "instagram" | "tiktok" | "youtube") =>
     (socialAccounts || []).find((acc) => acc.platform === platform);
 
-  const startConnect = (platform: "instagram" | "tiktok" | "youtube") => {
-    window.location.href = `/api/social/connect?platform=${platform}`;
+  const fetchStats = (platform: "instagram" | "tiktok" | "youtube") => {
+    const url = socialLinks[platform];
+    if (!url || !url.trim()) {
+      setError("Please enter a profile link first.");
+      return;
+    }
+    lookupSocial.mutate({ platform, url: url.trim() });
   };
 
   const renderStep = () => {
@@ -569,19 +574,14 @@ useEffect(() => {
                         )}
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => startConnect(platform)}>
-                          {account ? "Reconnect" : "Connect"}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchStats(platform)}
+                          disabled={lookupSocial.isPending}
+                        >
+                          {account ? "Refresh" : "Fetch"}
                         </Button>
-                        {account && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => syncSocial.mutate(platform)}
-                            disabled={syncSocial.isPending}
-                          >
-                            Refresh
-                          </Button>
-                        )}
                       </div>
                     </div>
                     {account && (
