@@ -39,9 +39,9 @@ function extractHandle(urlOrHandle: string, platform: Platform): string | undefi
 }
 
 function mapProfile(platform: Platform, raw: any) {
-  const data = raw?.data;
+  const data = raw?.data ?? raw;
   const id = data?.id;
-  const stats = data?.statistics?.total ?? {};
+  const stats = data?.statistics?.total ?? data?.statistics ?? {};
 
   if (platform === 'youtube') {
     return {
@@ -125,9 +125,10 @@ export default requireAuth(async (req: VercelRequest, res: VercelResponse) => {
       sbResponse = await client.instagram.user(handle);
     }
 
-    const success =
-      sbResponse?.status?.success === true || sbResponse?.status?.success === 'true' || !!sbResponse?.data;
-    if (!success || !sbResponse?.data) {
+    const hasStatusSuccess =
+      sbResponse?.status?.success === true || sbResponse?.status?.success === 'true';
+    const hasDataBlock = !!sbResponse?.data || !!(sbResponse && sbResponse.id);
+    if (!hasStatusSuccess && !hasDataBlock) {
       console.error('SocialBlade lookup failure', { platform, handle, status: sbResponse?.status, dataKeys: Object.keys(sbResponse || {}) });
       const code = sbResponse?.status?.status;
       const errMsg = sbResponse?.status?.error || 'Lookup failed';
