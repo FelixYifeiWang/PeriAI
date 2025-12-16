@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogOut, Sparkles, Link as LinkIcon, Copy, CheckCircle, ArrowLeft } from "lucide-react";
 import { z } from "zod";
-import type { InfluencerPreferences } from "@shared/schema";
+import type { InfluencerPreferences, InfluencerSocialAccount } from "@shared/schema";
 import { Link } from "wouter";
 import LanguageToggle from "@/components/language-toggle";
 import { useLanguage } from "@/providers/language-provider";
@@ -278,6 +278,17 @@ export default function InfluencerSetup() {
     enabled: isAuthenticated,
   });
 
+  const { data: socialAccounts, refetch: refetchSocialAccounts } = useQuery<InfluencerSocialAccount[]>({
+    queryKey: ["/api/social/accounts"],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const res = await fetch("/api/social/accounts", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load social accounts");
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+
   const defaultValues = useMemo<PreferencesFormData>(
     () => ({
       personalContentPreferences: copy.defaultTemplate,
@@ -401,6 +412,32 @@ export default function InfluencerSetup() {
       });
     },
   });
+
+  const syncSocial = useMutation({
+    mutationFn: async (platform: "instagram" | "tiktok" | "youtube") => {
+      const res = await fetch("/api/social/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ platform }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message || "Failed to sync account");
+      }
+      return res.json() as Promise<InfluencerSocialAccount>;
+    },
+    onSuccess: () => {
+      refetchSocialAccounts();
+    },
+  });
+
+  const getAccount = (platform: "instagram" | "tiktok" | "youtube") =>
+    (socialAccounts || []).find((acc) => acc.platform === platform);
+
+  const startConnect = (platform: "instagram" | "tiktok" | "youtube") => {
+    window.location.href = `/api/social/connect?platform=${platform}`;
+  };
 
   const handleLogout = async () => {
     try {
@@ -654,6 +691,44 @@ export default function InfluencerSetup() {
                   <p className="text-sm font-medium text-foreground">
                     {copy.aiInstructions.socialLinksLabel}
                   </p>
+                  <div className="space-y-3">
+                    {(["instagram", "tiktok", "youtube"] as const).map((platform) => {
+                      const account = getAccount(platform);
+                      return (
+                        <div key={platform} className="rounded-lg border bg-muted/40 p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">{platform}</p>
+                              {account?.handle && (
+                                <p className="text-sm text-foreground">@{account.handle}</p>
+                              )}
+                              {account && (
+                                <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                                  <span>Followers: {account.followers ?? "—"}</span>
+                                  <span>Likes/Views: {account.likes ?? "—"}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => startConnect(platform)}>
+                                {account ? "Reconnect" : "Connect"}
+                              </Button>
+                              {account && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => syncSocial.mutate(platform)}
+                                  disabled={syncSocial.isPending}
+                                >
+                                  Refresh
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                   {(["instagram", "tiktok", "youtube"] as const).map((platform) => (
                     <FormField
                       key={platform}

@@ -17,6 +17,9 @@ import {
   type InsertBusinessProfile,
   type Campaign,
   type InsertCampaign,
+  influencerSocialAccounts,
+  type InfluencerSocialAccount,
+  type InsertInfluencerSocialAccount,
 } from "../../shared/schema.js";
 import { db } from "./db.js";
 import { eq, and, or, desc, isNotNull, lte } from "drizzle-orm";
@@ -65,6 +68,16 @@ export interface IStorage {
   // Messages
   getMessagesByInquiry(inquiryId: string): Promise<Message[]>;
   addMessage(message: InsertMessage): Promise<Message>;
+
+  // Influencer social accounts
+  getSocialAccountsByUser(userId: string): Promise<InfluencerSocialAccount[]>;
+  upsertSocialAccount(account: InsertInfluencerSocialAccount): Promise<InfluencerSocialAccount>;
+  deleteSocialAccount(userId: string, platform: InfluencerSocialAccount["platform"]): Promise<void>;
+  touchSocialAccountSync(
+    userId: string,
+    platform: InfluencerSocialAccount["platform"],
+    data: Partial<InfluencerSocialAccount>,
+  ): Promise<InfluencerSocialAccount | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -333,6 +346,63 @@ export class DatabaseStorage implements IStorage {
 
   async addMessage(message: InsertMessage): Promise<Message> {
     const [result] = await db.insert(messages).values(message).returning();
+    return result;
+  }
+
+  // Influencer social accounts
+  async getSocialAccountsByUser(userId: string): Promise<InfluencerSocialAccount[]> {
+    return await db
+      .select()
+      .from(influencerSocialAccounts)
+      .where(eq(influencerSocialAccounts.userId, userId))
+      .orderBy(influencerSocialAccounts.platform);
+  }
+
+  async upsertSocialAccount(account: InsertInfluencerSocialAccount): Promise<InfluencerSocialAccount> {
+    const [result] = await db
+      .insert(influencerSocialAccounts)
+      .values(account)
+      .onConflictDoUpdate({
+        target: [influencerSocialAccounts.userId, influencerSocialAccounts.platform],
+        set: {
+          ...account,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async deleteSocialAccount(userId: string, platform: InfluencerSocialAccount["platform"]): Promise<void> {
+    await db
+      .delete(influencerSocialAccounts)
+      .where(
+        and(
+          eq(influencerSocialAccounts.userId, userId),
+          eq(influencerSocialAccounts.platform, platform),
+        ),
+      );
+  }
+
+  async touchSocialAccountSync(
+    userId: string,
+    platform: InfluencerSocialAccount["platform"],
+    data: Partial<InfluencerSocialAccount>,
+  ): Promise<InfluencerSocialAccount | undefined> {
+    const [result] = await db
+      .update(influencerSocialAccounts)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+        lastSyncedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(influencerSocialAccounts.userId, userId),
+          eq(influencerSocialAccounts.platform, platform),
+        ),
+      )
+      .returning();
     return result;
   }
 }

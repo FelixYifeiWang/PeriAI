@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import type { InfluencerPreferences } from "@shared/schema";
+import type { InfluencerPreferences, InfluencerSocialAccount } from "@shared/schema";
 import { getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/providers/language-provider";
@@ -50,16 +50,19 @@ const translations = {
         labels: {
           personal: "Personal content preferences",
           additional: "Additional guidelines (optional)",
-          socials: "Social links (optional)",
         },
         placeholders: {
           personal: "Themes you love, brand values you align with, or types of stories you share.",
           additional: "Any do’s and don’ts, collaboration preferences, or timelines.",
-          socials: {
-            instagram: "https://instagram.com/you",
-            tiktok: "https://www.tiktok.com/@you",
-            youtube: "https://www.youtube.com/@you",
-          },
+        },
+      },
+      socials: {
+        title: "Add your social links (optional)",
+        description: "Share where brands can browse your work.",
+        placeholders: {
+          instagram: "https://instagram.com/you",
+          tiktok: "https://www.tiktok.com/@you",
+          youtube: "https://www.youtube.com/@you",
         },
       },
     },
@@ -130,16 +133,19 @@ const translations = {
         labels: {
           personal: "个人内容偏好",
           additional: "额外指引（可选）",
-          socials: "社媒链接（可选）",
         },
         placeholders: {
           personal: "你擅长的主题、契合的品牌价值观、或经常分享的故事方向。",
           additional: "填写合作的其他要求、禁忌或时间安排等。",
-          socials: {
-            instagram: "https://instagram.com/你的账号",
-            tiktok: "https://www.tiktok.com/@你的账号",
-            youtube: "https://www.youtube.com/@你的频道",
-          },
+        },
+      },
+      socials: {
+        title: "添加你的社媒链接（可选）",
+        description: "方便品牌查看你的作品与账号表现。",
+        placeholders: {
+          instagram: "https://instagram.com/你的账号",
+          tiktok: "https://www.tiktok.com/@你的账号",
+          youtube: "https://www.youtube.com/@你的频道",
         },
       },
     },
@@ -245,6 +251,17 @@ export default function OnboardingPage() {
       retry: 1,
     });
 
+  const { data: socialAccounts, refetch: refetchSocialAccounts } = useQuery<InfluencerSocialAccount[]>({
+    queryKey: ["/api/social/accounts"],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const res = await fetch("/api/social/accounts", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load social accounts");
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+
 useEffect(() => {
   if (!isLoading && !isAuthenticated) {
     setLocation("/influencer/login");
@@ -312,6 +329,25 @@ useEffect(() => {
     },
   });
 
+  const syncSocial = useMutation({
+    mutationFn: async (platform: "instagram" | "tiktok" | "youtube") => {
+      const res = await fetch("/api/social/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ platform }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error((errBody as { message?: string }).message || "Failed to sync account");
+      }
+      return res.json() as Promise<InfluencerSocialAccount>;
+    },
+    onSuccess: () => {
+      refetchSocialAccounts();
+    },
+  });
+
   if (isLoading || (isAuthenticated && preferencesLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -339,37 +375,55 @@ useEffect(() => {
       return;
     }
 
-  if (stepIndex === 2) {
-    if (!contentLength) {
-      setError(copy.errors.contentLengthMissing);
-      return;
-    }
-    setStepIndex(3);
+    if (stepIndex === 2) {
+      if (!contentLength) {
+        setError(copy.errors.contentLengthMissing);
+        return;
+      }
+      setStepIndex(3);
       return;
     }
 
+    if (stepIndex === 3) {
+      const trimmedPreferences = personalPreferences.trim();
+      if (trimmedPreferences.length < 10) {
+        setError(copy.errors.preferencesShort);
+        return;
+      }
+      setStepIndex(4);
+      return;
+    }
+
+    // Step 4: social links + submit
     const trimmedPreferences = personalPreferences.trim();
     if (trimmedPreferences.length < 10) {
       setError(copy.errors.preferencesShort);
       return;
     }
 
-  if (!monetaryBaseline) {
-    setError(copy.errors.monetaryMissing);
-    setStepIndex(0);
-    return;
-  }
+    if (!monetaryBaseline) {
+      setError(copy.errors.monetaryMissing);
+      setStepIndex(0);
+      return;
+    }
 
-  savePreferences.mutate({
-    personalContentPreferences: trimmedPreferences,
-    monetaryBaseline,
-    contentLength: contentLength as ContentLength,
-    additionalGuidelines: additionalGuidelines.trim() || undefined,
-    socialLinks: Object.fromEntries(
-      Object.entries(socialLinks).filter(([, value]) => value && value.trim().length > 0),
-    ),
-  });
-};
+    savePreferences.mutate({
+      personalContentPreferences: trimmedPreferences,
+      monetaryBaseline,
+      contentLength: contentLength as ContentLength,
+      additionalGuidelines: additionalGuidelines.trim() || undefined,
+      socialLinks: Object.fromEntries(
+        Object.entries(socialLinks).filter(([, value]) => value && value.trim().length > 0),
+      ),
+    });
+  };
+
+  const getAccount = (platform: "instagram" | "tiktok" | "youtube") =>
+    (socialAccounts || []).find((acc) => acc.platform === platform);
+
+  const startConnect = (platform: "instagram" | "tiktok" | "youtube") => {
+    window.location.href = `/api/social/connect?platform=${platform}`;
+  };
 
   const renderStep = () => {
     switch (stepIndex) {
@@ -450,7 +504,6 @@ useEffect(() => {
           </div>
         );
       case 3:
-      default:
         return (
           <div className="flex w-full flex-col items-center gap-6 text-center">
             <div className="space-y-2">
@@ -488,29 +541,77 @@ useEffect(() => {
                   placeholder={copy.steps.preferences.placeholders.additional}
                 />
               </div>
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-[#573ccb]">
-                  {copy.steps.preferences.labels.socials}
-                </p>
-                {(["instagram", "tiktok", "youtube"] as const).map((platform) => (
-                  <div key={platform} className="space-y-1">
-                    <label className="text-xs uppercase tracking-wide text-slate-500">
-                      {platform}
-                    </label>
-                    <input
-                      value={socialLinks[platform] ?? ""}
-                      onChange={(event) =>
-                        setSocialLinks((prev) => ({
-                          ...prev,
-                          [platform]: event.target.value,
-                        }))
-                      }
-                      className="w-full rounded-3xl border border-transparent bg-white/85 px-4 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
-                      placeholder={copy.steps.preferences.placeholders.socials[platform]}
-                    />
+            </div>
+          </div>
+        );
+      case 4:
+      default:
+        return (
+          <div className="flex w-full flex-col items-center gap-6 text-center">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-[#573ccb] md:text-3xl">
+                {copy.steps.socials.title}
+              </h2>
+              <p className="text-base text-slate-600">
+                {copy.steps.socials.description}
+              </p>
+            </div>
+            <div className="w-full max-w-lg space-y-5 text-left">
+              {(["instagram", "tiktok", "youtube"] as const).map((platform) => {
+                const account = getAccount(platform);
+                return (
+                  <div key={platform} className="space-y-2 rounded-3xl bg-white/80 p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm uppercase tracking-wide text-slate-500">{platform}</p>
+                        {account?.handle && (
+                          <p className="text-sm text-slate-700">@{account.handle}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => startConnect(platform)}>
+                          {account ? "Reconnect" : "Connect"}
+                        </Button>
+                        {account && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => syncSocial.mutate(platform)}
+                            disabled={syncSocial.isPending}
+                          >
+                            Refresh
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {account && (
+                      <div className="flex gap-4 text-xs text-slate-600">
+                        <span>Followers: {account.followers ?? "—"}</span>
+                        <span>Likes/Views: {account.likes ?? "—"}</span>
+                        {account.lastSyncedAt && (
+                          <span>Last synced: {new Date(account.lastSyncedAt).toLocaleString()}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <label className="text-xs uppercase tracking-wide text-slate-500">
+                        Profile link (optional)
+                      </label>
+                      <input
+                        value={socialLinks[platform] ?? ""}
+                        onChange={(event) =>
+                          setSocialLinks((prev) => ({
+                            ...prev,
+                            [platform]: event.target.value,
+                          }))
+                        }
+                        className="w-full rounded-3xl border border-transparent bg-white px-4 py-2 text-sm text-slate-700 shadow focus:border-[#a855f7] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+                        placeholder={copy.steps.socials.placeholders[platform]}
+                      />
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
         );

@@ -125,6 +125,36 @@ export const insertInfluencerPreferencesSchema = createInsertSchema(influencerPr
 export type InsertInfluencerPreferences = z.infer<typeof insertInfluencerPreferencesSchema>;
 export type InfluencerPreferences = typeof influencerPreferences.$inferSelect;
 
+// Connected social accounts for influencers
+export const influencerSocialAccounts = pgTable("influencer_social_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  platform: varchar("platform", { enum: ["instagram", "tiktok", "youtube"] }).notNull(),
+  handle: varchar("handle"),
+  platformAccountId: varchar("platform_account_id"),
+  followers: integer("followers"),
+  likes: integer("likes"),
+  rawProfile: jsonb("raw_profile"),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userPlatformIdx: uniqueIndex("influencer_social_accounts_user_platform_idx").on(table.userId, table.platform),
+}));
+
+export const insertInfluencerSocialAccountSchema = createInsertSchema(influencerSocialAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSyncedAt: true,
+});
+
+export type InsertInfluencerSocialAccount = z.infer<typeof insertInfluencerSocialAccountSchema>;
+export type InfluencerSocialAccount = typeof influencerSocialAccounts.$inferSelect;
+
 // Business inquiries
 export const inquiries = pgTable("inquiries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
